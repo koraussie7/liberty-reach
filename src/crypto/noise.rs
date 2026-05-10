@@ -1,5 +1,6 @@
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use rand::rngs::OsRng;
+use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -17,8 +18,9 @@ pub struct CryptoKeyPair {
 
 impl CryptoKeyPair {
     pub fn new() -> Self {
-        let mut csprng = OsRng;
-        let signing_key = SigningKey::generate(&mut csprng);
+        let mut key_bytes = [0u8; 32];
+        OsRng.fill_bytes(&mut key_bytes);
+        let signing_key = SigningKey::from_bytes(&key_bytes);
         let verifying_key = signing_key.verifying_key();
         Self {
             signing_key,
@@ -31,14 +33,19 @@ impl CryptoKeyPair {
     }
 
     pub fn verify(message: &[u8], signature: &[u8], public_key: &[u8]) -> bool {
-        if let (Ok(pk), Ok(sig)) = (
-            VerifyingKey::from_bytes(public_key.try_into().unwrap()),
-            Signature::from_slice(signature),
-        ) {
-            pk.verify(message, &sig).is_ok()
-        } else {
-            false
-        }
+        let pk_bytes: [u8; 32] = match public_key.try_into() {
+            Ok(b) => b,
+            Err(_) => return false,
+        };
+        let pk = match VerifyingKey::from_bytes(&pk_bytes) {
+            Ok(k) => k,
+            Err(_) => return false,
+        };
+        let sig = match Signature::from_slice(signature) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+        pk.verify(message, &sig).is_ok()
     }
 
     pub fn public_key_bytes(&self) -> [u8; 32] {

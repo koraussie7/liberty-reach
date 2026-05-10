@@ -1,5 +1,6 @@
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StoredMessage {
@@ -11,7 +12,7 @@ pub struct StoredMessage {
 }
 
 pub struct SqliteStorage {
-    conn: Connection,
+    conn: Mutex<Connection>,
 }
 
 impl SqliteStorage {
@@ -34,7 +35,7 @@ impl SqliteStorage {
             );",
         )?;
 
-        Ok(Self { conn })
+        Ok(Self { conn: Mutex::new(conn) })
     }
 
     pub fn save_message(
@@ -43,15 +44,17 @@ impl SqliteStorage {
         content: &str,
         is_ai: bool,
     ) -> anyhow::Result<i64> {
-        self.conn.execute(
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "INSERT INTO messages (sender, content, is_ai) VALUES (?1, ?2, ?3)",
             params![sender, content, is_ai as i32],
         )?;
-        Ok(self.conn.last_insert_rowid())
+        Ok(conn.last_insert_rowid())
     }
 
     pub fn get_recent_messages(&self, limit: i64) -> anyhow::Result<Vec<StoredMessage>> {
-        let mut stmt = self.conn.prepare(
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             "SELECT id, sender, content, is_ai, timestamp FROM messages ORDER BY timestamp DESC LIMIT ?1",
         )?;
 
@@ -71,7 +74,8 @@ impl SqliteStorage {
     }
 
     pub fn cache_peer(&self, peer_id: &str, alias: Option<&str>) -> anyhow::Result<()> {
-        self.conn.execute(
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "INSERT OR REPLACE INTO peer_cache (peer_id, last_seen, alias) VALUES (?1, datetime('now'), ?2)",
             params![peer_id, alias],
         )?;
@@ -79,7 +83,8 @@ impl SqliteStorage {
     }
 
     pub fn get_cached_peers(&self) -> anyhow::Result<Vec<(String, String, Option<String>)>> {
-        let mut stmt = self.conn.prepare(
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             "SELECT peer_id, last_seen, alias FROM peer_cache ORDER BY last_seen DESC",
         )?;
 

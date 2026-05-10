@@ -75,6 +75,13 @@ class LibertyBridge extends ChangeNotifier {
     return '(simulated AI response for: $prompt)';
   }
 
+  Future<String> askMultimodal(String prompt, List<String> imagesBase64) async {
+    // TODO: call Rust ask_ai_multimodal()
+    // final result = await rust.api.askAiMultimodal(prompt: prompt, imagesBase64: imagesBase64);
+    debugPrint('[LibertyBridge] Multimodal ask: $prompt (${imagesBase64.length} images)');
+    return '(simulated multimodal response for: $prompt)';
+  }
+
   Future<String> connectToPeer(String address) async {
     // TODO: call Rust connect_to_peer()
     // final result = await rust.api.connectToPeer(address: address);

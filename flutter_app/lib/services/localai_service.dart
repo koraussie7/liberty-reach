@@ -8,60 +8,87 @@ class LocalAIService {
   final http.Client _client;
   bool _lastHealth = false;
 
-  LocalAIService({String baseUrl = 'http://localhost:8080'})
+  LocalAIService({String baseUrl = 'http://185.55.243.225:8081'})
       : _baseUrl = baseUrl,
         _client = http.Client();
 
   String get baseUrl => _baseUrl;
-
   set baseUrl(String url) => _baseUrl = url;
 
   Future<String> generate(String prompt) async {
     try {
       final response = await _client
           .post(
-            Uri.parse('$_baseUrl/v1/completions'),
+            Uri.parse('$_baseUrl/v1/chat/completions'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'model': 'gemma-2-2b-it',
-              'prompt': _buildPrompt(prompt),
+              'model': 'gemma-4-e4b-it',
+              'messages': [{'role': 'user', 'content': prompt}],
               'stream': false,
-              'max_tokens': 1024,
+              'max_tokens': 2048,
               'temperature': 0.7,
-              'top_p': 0.9,
-              'repeat_penalty': 1.1,
             }),
           )
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['choices']?[0]?['text']?.toString().trim() ?? '(no response)';
+        return data['choices']?[0]?['message']?['content']?.toString().trim() ?? '(no response)';
       } else {
         return 'Error: ${response.statusCode}';
       }
     } on SocketException {
-      return '서버에 연결할 수 없습니다 (LocalAI)';
-    } on http.ClientException {
-      return '네트워크 오류';
+      return 'Server not reachable';
     } catch (e) {
-      debugPrint('LocalAI error: $e');
-      return '(응답 없음)';
+      debugPrint('AI error: $e');
+      return '(error)';
     }
   }
 
-  String _buildPrompt(String userMessage) {
-    return '''<start_of_turn>user
-$userMessage<end_of_turn>
-<start_of_turn>model
-''';
+  Future<String> generateMultimodal(String text, List<String> imagesBase64) async {
+    try {
+      final List<Map<String, dynamic>> content = [
+        {'type': 'text', 'text': text}
+      ];
+      for (final img in imagesBase64) {
+        content.add({
+          'type': 'image_url',
+          'image_url': {'url': 'data:image/jpeg;base64,$img'}
+        });
+      }
+
+      final response = await _client
+          .post(
+            Uri.parse('$_baseUrl/v1/chat/completions'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'model': 'gemma-4-e4b-it',
+              'messages': [{'role': 'user', 'content': content}],
+              'max_tokens': 4096,
+              'temperature': 0.7,
+            }),
+          )
+          .timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['choices']?[0]?['message']?['content']?.toString().trim() ?? '(no response)';
+      } else {
+        return 'Error: ${response.statusCode}';
+      }
+    } on SocketException {
+      return 'Server not reachable';
+    } catch (e) {
+      debugPrint('Multimodal error: $e');
+      return '(error)';
+    }
   }
 
   Future<bool> health() async {
     try {
       final response = await _client
           .get(Uri.parse('$_baseUrl/healthz'))
-          .timeout(const Duration(seconds: 3));
+          .timeout(const Duration(seconds: 5));
       _lastHealth = response.statusCode == 200;
       return _lastHealth;
     } catch (_) {

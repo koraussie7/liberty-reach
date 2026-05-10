@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import '../models/chat_message.dart';
-import '../services/liberty_bridge.dart';
+import '../services/localai_service.dart';
+import '../services/chat_service.dart';
 import '../widgets/message_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -26,56 +30,89 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
-  final LibertyBridge _bridge = LibertyBridge();
+  final LocalAIService _ai = LocalAIService();
+  final ChatService _chat = ChatService();
+  final ImagePicker _picker = ImagePicker();
   final Uuid _uuid = const Uuid();
 
   bool _isAiReady = false;
   bool _isLoading = false;
-  StreamSubscription? _bridgeSub;
+  StreamSubscription? _chatSub;
 
   @override
   void initState() {
     super.initState();
-    _checkAiHealth();
-    _listenToBridge();
+    _checkHealth();
+    _chatSub = _chat.messages.listen((msg) {
+      if (mounted) _addMessage(msg);
+    });
   }
 
   @override
   void dispose() {
-    _bridgeSub?.cancel();
+    _chatSub?.cancel();
     _textController.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
-    _bridge.dispose();
+    _ai.dispose();
+    _chat.dispose();
     super.dispose();
   }
 
-  Future<void> _checkAiHealth() async {
-    final health = await _bridge.checkAIHealth();
-    if (mounted) setState(() => _isAiReady = health);
+  Future<void> _checkHealth() async {
+    final ok = await _ai.health();
+    if (mounted) setState(() => _isAiReady = ok);
   }
 
-  void _listenToBridge() {
-    _bridgeSub = _bridge.onMessage.listen((msg) {
-      if (mounted) _insertMessage(msg);
-    });
-  }
-
-  void _insertMessage(ChatMessage msg) {
+  void _addMessage(ChatMessage msg) {
     setState(() => _messages.add(msg));
-    _scrollToBottom();
-  }
-
-  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
+          const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
       }
     });
+  }
+
+  Future<void> _pickImage() async {
+    final src = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(leading: const Icon(Icons.camera_alt), title: const Text('Take photo'), onTap: () => Navigator.pop(ctx, ImageSource.camera)),
+          ListTile(leading: const Icon(Icons.photo_library), title: const Text('Choose from gallery'), onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
+        ]),
+      ),
+    );
+    if (src == null) return;
+    final file = await _picker.pickImage(source: src, maxWidth: 1024);
+    if (file == null) return;
+    await _sendImage(file.path);
+  }
+
+  Future<void> _sendImage(String path) async {
+    setState(() => _isLoading = true);
+    final prompt = _textController.text.trim().isEmpty ? 'Describe this image' : _textController.text.trim();
+    _textController.clear();
+
+    final bytes = await File(path).readAsBytes();
+    final b64 = base64Encode(bytes);
+
+    _addMessage(ChatMessage(id: _uuid.v4(), sender: 'me', content: prompt, isMe: true, imagePaths: [path]));
+    _addMessage(ChatMessage(id: _uuid.v4(), sender: 'Gemma AI', content: 'Analyzing...', isMe: false, isAI: true, isLoading: true));
+
+    final response = await _ai.generateMultimodal(prompt, [b64]);
+
+    if (mounted) {
+      setState(() {
+        _messages.removeWhere((m) => m.isLoading);
+        _addMessage(ChatMessage(id: _uuid.v4(), sender: 'Gemma AI', content: response, isMe: false, isAI: true));
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -83,63 +120,30 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.isEmpty || _isLoading) return;
     _textController.clear();
 
-    final isAiCommand = text.startsWith('@gemma ') || text.startsWith('@ai ');
+    _addMessage(ChatMessage(id: _uuid.v4(), sender: 'me', content: text, isMe: true));
 
-    final myMsg = ChatMessage(
-      id: _uuid.v4(),
-      sender: 'me',
-      content: text,
-      isMe: true,
-    );
-    _insertMessage(myMsg);
-
-    if (widget.isAI || isAiCommand) {
-      final prompt = isAiCommand
-          ? text.replaceFirst(RegExp(r'^@(gemma|ai)\s'), '')
-          : text;
+    if (widget.isAI || text.startsWith('@gemma ') || text.startsWith('@ai ')) {
+      final prompt = text.replaceFirst(RegExp(r'^@(gemma|ai)\s'), '');
       await _getAiResponse(prompt);
     } else {
-      // Send via Rust P2P bridge
-      await _bridge.sendMessage(text);
-      // Simulate reply for now
+      _chat.send(text, widget.peerId);
       Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) {
-          _bridge.incomingMessage(ChatMessage(
-            id: _uuid.v4(),
-            sender: widget.peerName,
-            content: 'Reply from ${widget.peerName}: "$text"',
-            isMe: false,
-          ));
-        }
+        if (mounted) _addMessage(ChatMessage(id: _uuid.v4(), sender: widget.peerName, content: 'Reply: "$text"', isMe: false));
       });
     }
   }
 
   Future<void> _getAiResponse(String prompt) async {
     setState(() => _isLoading = true);
+    final lid = _uuid.v4();
+    _addMessage(ChatMessage(id: lid, sender: 'Gemma AI', content: '...', isMe: false, isAI: true, isLoading: true));
 
-    final loadingId = _uuid.v4();
-    _insertMessage(ChatMessage(
-      id: loadingId,
-      sender: 'Gemma AI',
-      content: '● ● ●',
-      isMe: false,
-      isAI: true,
-      isLoading: true,
-    ));
-
-    final response = await _bridge.askAI(prompt);
+    final resp = await _ai.generate(prompt);
 
     if (mounted) {
       setState(() {
-        _messages.removeWhere((m) => m.id == loadingId);
-        _insertMessage(ChatMessage(
-          id: _uuid.v4(),
-          sender: 'Gemma AI',
-          content: response,
-          isMe: false,
-          isAI: true,
-        ));
+        _messages.removeWhere((m) => m.id == lid);
+        _addMessage(ChatMessage(id: _uuid.v4(), sender: 'Gemma AI', content: resp, isMe: false, isAI: true));
         _isLoading = false;
       });
     }
@@ -148,127 +152,87 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _buildAppBar(),
+      appBar: AppBar(
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black87), onPressed: () => Navigator.pop(context)),
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: widget.isAI ? const Color(0xFFFEE500) : Colors.grey[300],
+              child: Icon(widget.isAI ? Icons.auto_awesome : Icons.person, color: Colors.black54, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.peerName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Row(
+                  children: [
+                    Container(width: 6, height: 6, decoration: BoxDecoration(
+                      color: _isAiReady ? const Color(0xFF4CAF50) : Colors.grey[400], shape: BoxShape.circle,
+                    )),
+                    const SizedBox(width: 4),
+                    Text(_isAiReady ? 'Gemma-4 Ready' : 'Offline', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
       body: Column(
         children: [
-          if (!_isAiReady && widget.isAI) _buildAiOfflineBanner(),
-          Expanded(
-            child: _messages.isEmpty ? _buildEmptyChat() : _buildMessageList(),
-          ),
-          _buildInputBar(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageList() {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.only(top: 8, bottom: 8),
-      itemCount: _messages.length,
-      itemBuilder: (context, index) {
-        final showSender = index == 0 ||
-            _messages[index].sender != _messages[index - 1].sender;
-        return MessageBubble(
-          message: _messages[index],
-          showSender: showSender,
-        );
-      },
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.black87),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: widget.isAI
-                ? const Color(0xFFFEE500)
-                : Colors.grey[300],
-            child: Icon(
-              widget.isAI ? Icons.auto_awesome : Icons.person,
-              color: Colors.black54,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(widget.peerName,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              Row(
+          if (!_isAiReady && widget.isAI)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.orange[50],
+              child: Row(
                 children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: _isAiReady ? const Color(0xFF4CAF50) : Colors.grey[400],
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _isAiReady ? 'AI 연결됨' : 'AI 오프라인',
-                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                  ),
+                  const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  Text('Cannot connect to 185.55.243.225:8081', style: TextStyle(fontSize: 12, color: Colors.orange[800])),
                 ],
               ),
-            ],
+            ),
+          Expanded(
+            child: _messages.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(widget.isAI ? Icons.auto_awesome : Icons.chat, size: 48, color: Colors.grey[300]),
+                        const SizedBox(height: 12),
+                        Text(widget.isAI ? 'Send text or image' : 'Send a message', style: TextStyle(fontSize: 14, color: Colors.grey[400])),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.only(top: 8, bottom: 8),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, i) {
+                      final show = i == 0 || _messages[i].sender != _messages[i - 1].sender;
+                      return MessageBubble(message: _messages[i], showSender: show);
+                    },
+                  ),
           ),
+          _buildInput(),
         ],
       ),
     );
   }
 
-  Widget _buildAiOfflineBanner() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Colors.orange[50],
-      child: Row(
-        children: [
-          const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
-          const SizedBox(width: 8),
-          Text('LocalAI 서버에 연결할 수 없습니다 (localhost:8080)',
-              style: TextStyle(fontSize: 12, color: Colors.orange[800])),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyChat() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(widget.isAI ? Icons.auto_awesome : Icons.chat,
-              size: 48, color: Colors.grey[300]),
-          const SizedBox(height: 12),
-          Text(
-            widget.isAI ? '@gemma 로 AI에게 질문해보세요' : '메시지를 보내보세요',
-            style: TextStyle(fontSize: 14, color: Colors.grey[400]),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInputBar() {
+  Widget _buildInput() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, -2))],
       ),
-      padding: EdgeInsets.only(left: 8, right: 8, top: 8, bottom: MediaQuery.of(context).padding.bottom + 8),
+      padding: EdgeInsets.only(left: 4, right: 8, top: 8, bottom: MediaQuery.of(context).padding.bottom + 8),
       child: Row(
         children: [
-          IconButton(icon: const Icon(Icons.add_circle_outline, color: Colors.grey), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.add_circle_outline, color: Colors.grey), onPressed: widget.isAI ? _pickImage : null),
           Expanded(
             child: Container(
               decoration: BoxDecoration(color: const Color(0xFFF0F0F0), borderRadius: BorderRadius.circular(20)),
@@ -279,7 +243,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _sendMessage(),
                 decoration: const InputDecoration(
-                  hintText: '메시지 입력...',
+                  hintText: 'Message...',
                   hintStyle: TextStyle(color: Colors.grey),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -291,14 +255,12 @@ class _ChatScreenState extends State<ChatScreen> {
           GestureDetector(
             onTap: _isLoading ? null : _sendMessage,
             child: Container(
-              width: 40,
-              height: 40,
+              width: 40, height: 40,
               decoration: BoxDecoration(
                 color: _isLoading ? Colors.grey[300] : const Color(0xFFFEE500),
                 shape: BoxShape.circle,
               ),
-              child: Icon(_isLoading ? Icons.hourglass_top : Icons.send,
-                  color: Colors.black87, size: 20),
+              child: Icon(_isLoading ? Icons.hourglass_top : Icons.send, color: Colors.black87, size: 20),
             ),
           ),
         ],

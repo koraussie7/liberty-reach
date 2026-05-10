@@ -1,11 +1,11 @@
 use libp2p::{
-    core::upgrade,
     gossipsub, identity, kad,
-    mdns, noise, swarm, tcp, quic, yamux,
-    Multiaddr, PeerId, StreamProtocol, Transport,
+    mdns, noise, swarm, tcp, yamux,
+    Multiaddr, PeerId, Transport, SwarmBuilder,
 };
 use libp2p::gossipsub::MessageAuthenticity;
-use libp2p::swarm::SwarmEvent;
+use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
+use futures::StreamExt;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
@@ -36,7 +36,7 @@ pub struct P2PSwarm {
     local_peer_id: PeerId,
 }
 
-#[derive(swarm::NetworkBehaviour)]
+#[derive(NetworkBehaviour)]
 pub struct P2PBehaviour {
     pub gossipsub: gossipsub::Behaviour,
     pub kademlia: kad::Behaviour<kad::store::MemoryStore>,
@@ -45,26 +45,12 @@ pub struct P2PBehaviour {
 
 impl P2PSwarm {
     pub async fn new(
-        identity_name: Arc<String>,
+        _identity_name: Arc<String>,
         port: u16,
         bootstrap: Option<&str>,
     ) -> anyhow::Result<Self> {
         let local_key = identity::Keypair::generate_ed25519();
         let local_peer_id = PeerId::from(local_key.public());
-
-        let noise_config = noise::Config::new(&local_key)?;
-        let yamux_config = yamux::Config::default();
-
-        let tcp_transport = tcp::tokio::Transport::default()
-            .upgrade(upgrade::Version::V1)
-            .authenticate(noise_config)
-            .multiplex(yamux_config)
-            .boxed();
-
-        let quic_transport = quic::tokio::Transport::new(quic::Config::new(&local_key)?)
-            .boxed();
-
-        let transport = tcp_transport.or(quic_transport).boxed();
 
         let gossipsub_config = gossipsub::ConfigBuilder::default()
             .heartbeat_interval(Duration::from_secs(1))
@@ -80,7 +66,7 @@ impl P2PSwarm {
         let gossipsub_behaviour = gossipsub::Behaviour::new(
             MessageAuthenticity::Signed(local_key.clone()),
             gossipsub_config,
-        )?;
+        ).map_err(|e| anyhow::anyhow!("Gossipsub: {}", e))?;
 
         let kademlia_store = kad::store::MemoryStore::new(local_peer_id);
         let kademlia_behaviour = kad::Behaviour::new(
@@ -99,13 +85,13 @@ impl P2PSwarm {
             mdns: mdns_behaviour,
         };
 
-        let mut swarm = swarm::SwarmBuilder::with_existing_identity(local_key)
+        let mut swarm = SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
             .with_other_transport(|key| {
                 let noise_config = noise::Config::new(key)?;
                 let yamux_config = yamux::Config::default();
                 Ok(tcp::tokio::Transport::default()
-                    .upgrade(upgrade::Version::V1)
+                    .upgrade(libp2p::core::upgrade::Version::V1)
                     .authenticate(noise_config)
                     .multiplex(yamux_config)
                     .boxed())
@@ -114,7 +100,6 @@ impl P2PSwarm {
             .build();
 
         swarm.listen_on(format!("/ip4/0.0.0.0/tcp/{}", port).parse()?)?;
-        swarm.listen_on(format!("/ip4/0.0.0.0/udp/{}/quic-v1", port).parse()?)?;
 
         let chat_topic = gossipsub::IdentTopic::new(CHAT_TOPIC);
         swarm.behaviour_mut().gossipsub.subscribe(&chat_topic)?;
@@ -160,7 +145,10 @@ pub async fn run_swarm(
 ) {
     loop {
         tokio::select! {
-            event = p2p_handle.write().await.swarm.next() => {
+            event = async {
+                let mut guard = p2p_handle.write().await;
+                guard.swarm.next().await
+            } => {
                 if let Some(swarm_event) = event {
                     handle_swarm_event(
                         swarm_event,
@@ -200,7 +188,7 @@ pub async fn run_swarm(
 }
 
 async fn handle_swarm_event(
-    event: SwarmEvent<P2PBehaviourEvent>,
+    event: SwarmEvent<<P2PBehaviour as NetworkBehaviour>::ToSwarm>,
     p2p_handle: &Arc<RwLock<P2PSwarm>>,
     storage: &Arc<RwLock<SqliteStorage>>,
     ai_client: &LocalAIClient,
@@ -210,13 +198,11 @@ async fn handle_swarm_event(
         SwarmEvent::NewListenAddr { address, .. } => {
             println!("Listening on {}", address);
         }
-        SwarmEvent::Behaviour(P2PBehaviourEvent::Gossipsub(
-            gossipsub::Event::Message {
-                propagation_source: _,
-                message_id: _,
-                message,
-            },
-        )) => {
+        SwarmEvent::Behaviour(P2PBehaviourEvent::Gossipsub(gossipsub::Event::Message {
+            propagation_source: _,
+            message_id: _,
+            message,
+        })) => {
             let msg_str = String::from_utf8_lossy(&message.data).to_string();
             if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&msg_str) {
                 let sender = parsed["sender"].as_str().unwrap_or("unknown");
@@ -272,9 +258,7 @@ async fn handle_swarm_event(
                 }
             }
         }
-        SwarmEvent::Behaviour(P2PBehaviourEvent::Mdns(
-            mdns::Event::Discovered(list),
-        )) => {
+        SwarmEvent::Behaviour(P2PBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
             for (peer_id, _addr) in list {
                 let mut swarm = p2p_handle.write().await;
                 let topic = gossipsub::IdentTopic::new(CHAT_TOPIC);
@@ -282,9 +266,7 @@ async fn handle_swarm_event(
                 println!("Discovered peer: {}", peer_id);
             }
         }
-        SwarmEvent::Behaviour(P2PBehaviourEvent::Mdns(
-            mdns::Event::Expired(list),
-        )) => {
+        SwarmEvent::Behaviour(P2PBehaviourEvent::Mdns(mdns::Event::Expired(list))) => {
             for (peer_id, _addr) in list {
                 println!("Peer expired: {}", peer_id);
             }
@@ -292,6 +274,3 @@ async fn handle_swarm_event(
         _ => {}
     }
 }
-
-#[allow(unused_imports)]
-use libp2p::swarm::derive::NetworkBehaviour;

@@ -115,7 +115,7 @@ pub async fn send_message(content: String) -> String {
     }
 }
 
-/// Ask the AI (Gemma via LocalAI)
+/// Ask the AI with text (Gemma via LocalAI)
 #[flutter_rust_bridge::frb]
 pub async fn ask_ai(prompt: String) -> String {
     let core = INSTANCE.read().await;
@@ -128,6 +128,24 @@ pub async fn ask_ai(prompt: String) -> String {
                 response
             }
             Err(e) => format!("AI error: {}", e),
+        },
+        None => "AI not initialized".to_string(),
+    }
+}
+
+/// Ask the AI with text + images (LLaVA multimodal)
+#[flutter_rust_bridge::frb]
+pub async fn ask_ai_multimodal(prompt: String, images_base64: Vec<String>) -> String {
+    let core = INSTANCE.read().await;
+    match &core.ai {
+        Some(ai) => match ai.generate_multimodal(&prompt, images_base64).await {
+            Ok(response) => {
+                if let Some(storage) = &core.storage {
+                    let _ = storage.write().await.save_message("AI", &response, true);
+                }
+                response
+            }
+            Err(e) => format!("Multimodal AI error: {}", e),
         },
         None => "AI not initialized".to_string(),
     }

@@ -5,6 +5,7 @@ mod storage;
 
 use clap::Parser;
 use std::sync::Arc;
+use tokio::io::AsyncBufReadExt;
 use tokio::sync::RwLock;
 
 #[derive(Parser)]
@@ -24,7 +25,7 @@ struct Cli {
     storage: String,
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
@@ -46,51 +47,50 @@ async fn main() -> anyhow::Result<()> {
 
     let p2p_handle = Arc::new(RwLock::new(swarm));
 
-    let ai_client = ai::localai::LocalAIClient::new(
-        "http://localhost:8080".to_string()
-    );
+    let ai_client = ai::localai::LocalAIClient::new();
 
     let p2p_clone = p2p_handle.clone();
     let storage_clone = storage.clone();
     let ai_clone = ai_client.clone();
     let identity_clone = identity.clone();
 
-    let network_task = tokio::spawn(async move {
-        p2p::swarm::run_swarm(
-            p2p_clone,
-            msg_rx,
-            storage_clone,
-            ai_clone,
-            identity_clone,
-        ).await;
-    });
+    let network = p2p::swarm::run_swarm(
+        p2p_clone,
+        msg_rx,
+        storage_clone,
+        ai_clone,
+        identity_clone,
+    );
+
+    let stdin_loop = async {
+        let stdin = tokio::io::BufReader::new(tokio::io::stdin());
+        let mut lines = stdin.lines();
+
+        while let Ok(Some(line)) = lines.next_line().await {
+            let line = line.trim().to_string();
+            if line.is_empty() { continue; }
+
+            if line == "/exit" || line == "/quit" {
+                let _ = msg_tx.send(p2p::swarm::AppEvent::Shutdown);
+                break;
+            }
+
+            if line.starts_with("/") {
+                handle_command(&line, &p2p_handle, &msg_tx, &storage, &ai_client, &identity).await;
+            } else {
+                let _ = msg_tx.send(p2p::swarm::AppEvent::SendMessage {
+                    content: line.clone(),
+                    peer_id: None,
+                });
+            }
+        }
+    };
 
     println!("[Liberty Reach] Node {} running on port {}", identity, cli.port);
     println!("[Liberty Reach] AI endpoint: http://localhost:8080");
     println!("[Liberty Reach] Type messages below (/help for commands):");
 
-    let stdin = tokio::io::BufReader::new(tokio::io::stdin());
-    let mut lines = stdin.lines();
-
-    while let Ok(Some(line)) = lines.next_line().await {
-        let line = line.trim().to_string();
-        if line.is_empty() { continue; }
-
-        if line == "/exit" || line == "/quit" {
-            break;
-        }
-
-        if line.starts_with("/") {
-            handle_command(&line, &p2p_handle, &msg_tx, &storage, &ai_client, &identity).await;
-        } else {
-            let _ = msg_tx.send(p2p::swarm::AppEvent::SendMessage {
-                content: line.clone(),
-                peer_id: None,
-            });
-        }
-    }
-
-    network_task.abort();
+    tokio::join!(network, stdin_loop);
     Ok(())
 }
 

@@ -9,48 +9,83 @@ pub struct LocalAIClient {
 
 impl LocalAIClient {
     pub fn new(base_url: String) -> Self {
-        Self {
-            client: Client::new(),
-            base_url,
-        }
+        Self { client: Client::new(), base_url }
     }
 
+    /// Text-only chat (gemma-4-e4b-it)
     pub async fn generate(&self, prompt: &str) -> anyhow::Result<String> {
         let payload = json!({
-            "model": "gemma-2-2b-it",
-            "prompt": prompt,
+            "model": "gemma-4-e4b-it",
+            "messages": [{"role": "user", "content": prompt}],
             "stream": false,
-            "max_tokens": 1024,
+            "max_tokens": 2048,
             "temperature": 0.7,
         });
 
         let resp = self
             .client
-            .post(format!("{}/v1/completions", self.base_url))
+            .post(format!("{}/v1/chat/completions", self.base_url))
+            .json(&payload)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            anyhow::bail!("LocalAI error: {}", resp.status());
+        }
+
+        let data: serde_json::Value = resp.json().await?;
+        Ok(data["choices"][0]["message"]["content"]
+            .as_str()
+            .unwrap_or("(no response)")
+            .to_string())
+    }
+
+    /// Multimodal (text + images) via gemma-4-e4b-it with mmproj
+    pub async fn generate_multimodal(
+        &self,
+        text: &str,
+        images: Vec<String>,
+    ) -> anyhow::Result<String> {
+        let mut content: Vec<serde_json::Value> = vec![
+            json!({"type": "text", "text": text})
+        ];
+
+        for img in &images {
+            content.push(json!({
+                "type": "image_url",
+                "image_url": { "url": format!("data:image/jpeg;base64,{}", img) }
+            }));
+        }
+
+        let payload = json!({
+            "model": "gemma-4-e4b-it",
+            "messages": [{"role": "user", "content": content}],
+            "max_tokens": 4096,
+            "temperature": 0.7,
+        });
+
+        let resp = self
+            .client
+            .post(format!("{}/v1/chat/completions", self.base_url))
             .json(&payload)
             .send()
             .await?;
 
         if !resp.status().is_success() {
             let status = resp.status();
-            let text = resp.text().await.unwrap_or_default();
-            anyhow::bail!("LocalAI error ({}): {}", status, text);
+            let body = resp.text().await.unwrap_or_default();
+            anyhow::bail!("Gemma-4 multimodal error ({}): {}", status, body);
         }
 
         let data: serde_json::Value = resp.json().await?;
-        Ok(data["choices"][0]["text"]
+        Ok(data["choices"][0]["message"]["content"]
             .as_str()
             .unwrap_or("(no response)")
             .to_string())
     }
 
     pub async fn health(&self) -> bool {
-        match self
-            .client
-            .get(format!("{}/healthz", self.base_url))
-            .send()
-            .await
-        {
+        match self.client.get(format!("{}/healthz", self.base_url)).send().await {
             Ok(resp) => resp.status().is_success(),
             Err(_) => false,
         }
