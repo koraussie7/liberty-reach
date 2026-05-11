@@ -90,10 +90,10 @@ class _ChatScreenState extends State<ChatScreen> {
     if (src == null) return;
     final file = await _picker.pickImage(source: src, maxWidth: 1024);
     if (file == null) return;
-    await _sendImage(file.path);
+    await _sendImageFile(file);
   }
 
-  Future<void> _sendImage(String path) async {
+  Future<void> _sendImageFile(XFile file) async {
     setState(() => _isLoading = true);
     final prompt = _textController.text.trim().isEmpty ? 'Describe this image' : _textController.text.trim();
     _textController.clear();
@@ -101,7 +101,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final bytes = await file.readAsBytes();
     final b64 = base64Encode(bytes);
 
-    _addMessage(ChatMessage(id: _uuid.v4(), sender: 'me', content: prompt, isMe: true, imagePaths: [path]));
+    _addMessage(ChatMessage(id: _uuid.v4(), sender: 'me', content: prompt, isMe: true, imagePaths: [file.path]));
     _addMessage(ChatMessage(id: _uuid.v4(), sender: 'Gemma AI', content: 'Analyzing...', isMe: false, isAI: true, isLoading: true));
 
     final response = await _ai.generateMultimodal(prompt, [b64]);
