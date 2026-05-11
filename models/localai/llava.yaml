@@ -1,0 +1,11 @@
+name: llava-1.6
+backend: llama
+parameters:
+  model: /models/llava-v1.6-mistral-7b-Q4_K_M.gguf
+  mmproj: /models/llava-v1.6-mistral-7b-mmproj-f32.gguf
+  temperature: 0.7
+  top_k: 40
+  top_p: 0.9
+  context_size: 4096
+  threads: 4
+  f16: true

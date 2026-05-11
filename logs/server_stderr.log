@@ -1,0 +1,6 @@
+INFO:     Will watch for changes in these directories: ['C:\\Users\\korau\\.local\\share\\opencode\\worktree\\6fe9dde3327b4756c69d114c2fd28cc19a8413de\\brave-wolf']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [14020] using StatReload
+INFO:     Started server process [1788]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

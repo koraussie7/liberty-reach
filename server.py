@@ -1,73 +1,64 @@
-import http.server, urllib.request, json, os, mimetypes
+﻿import uvicorn
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+import os
+import asyncio
+from typing import Dict
 
-LOCALAI = "http://localhost:8081"
-PORT = 80
+load_dotenv()
 
-class ProxyHandler(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        if self.path.startswith("/v1/") or self.path == "/healthz":
-            self.proxy("GET")
-        else:
-            super().do_GET()
+app = FastAPI(title='DADA-AI Server', version='0.1.0')
 
-    def do_POST(self):
-        if self.path.startswith("/v1/"):
-            self.proxy("POST")
-        else:
-            self.send_error(405)
+# CORS 설정 (Flutter, 웹, 모바일 모두 허용)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],           # 배포 시에는 실제 도메인으로 제한 권장
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
 
-    def do_OPTIONS(self):
-        self.send_cors()
-        self.send_response(200)
-        self.end_headers()
+# 간단한 인메모리 연결 관리 (WebSocket)
+active_connections: Dict[str, WebSocket] = {}
 
-    def send_cors(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+@app.get('/')
+async def root():
+    return {
+        'status': 'ok',
+        'message': 'DADA-AI Server is running',
+        'version': '0.1.0'
+    }
 
-    def proxy(self, method):
-        url = LOCALAI + self.path
-        body = None
-        if method == "POST":
-            length = int(self.headers.get("Content-Length", 0))
-            body = self.rfile.read(length)
+@app.get('/health')
+async def health():
+    return {'status': 'healthy'}
 
-        req = urllib.request.Request(url, data=body, method=method)
-        req.add_header("Content-Type", "application/json")
-        for h in ["Accept"]:
-            if h in self.headers:
-                req.add_header(h, self.headers[h])
+# WebSocket - 실시간 채팅용
+@app.websocket('/ws/{client_id}')
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    await websocket.accept()
+    active_connections[client_id] = websocket
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Echo + Multi-Agent 처리 (나중에 Rust Bridge로 연결)
+            await websocket.send_text(f'[Server] {data}')
+    except WebSocketDisconnect:
+        active_connections.pop(client_id, None)
 
-        try:
-            with urllib.request.urlopen(req, timeout=120) as res:
-                data = res.read()
-                self.send_response(res.status)
-                self.send_cors()
-                self.send_header("Content-Type", res.headers.get("Content-Type", "application/json"))
-                self.send_header("Content-Length", len(data))
-                self.end_headers()
-                self.wfile.write(data)
-        except urllib.error.HTTPError as e:
-            data = e.read()
-            self.send_response(e.code)
-            self.send_cors()
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(data)
-        except Exception as e:
-            self.send_response(502)
-            self.send_cors()
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}).encode())
+# AI 채팅 엔드포인트
+@app.post('/ai/chat')
+async def ai_chat(request: dict):
+    return {'response': 'AI 응답 준비중...', 'agent': 'Hermes'}
 
-    def log_message(self, fmt, *a):
-        pass
-
-if __name__ == "__main__":
-    import sys
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else PORT
-    server = http.server.HTTPServer(("0.0.0.0", port), ProxyHandler)
-    print(f"Serving at http://0.0.0.0:{port}  (proxying /v1/* -> {LOCALAI})")
-    server.serve_forever()
+if __name__ == '__main__':
+    port = int(os.getenv('SERVER_PORT', 8000))
+    print(f'=== DADA-AI Server starting on port {port} ===')
+    uvicorn.run(
+        'server:app',
+        host='0.0.0.0',
+        port=port,
+        reload=True,
+        log_level='info'
+    )

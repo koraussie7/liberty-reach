@@ -1,0 +1,6 @@
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+python-dotenv==1.2.2
+websockets==16.0
+pydantic==2.13.4
+

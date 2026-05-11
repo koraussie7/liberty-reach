@@ -1,72 +1,48 @@
-version: "3.9"
+version: '3.9'
 
 services:
-  localai:
-    image: localai/localai:latest-gpu-nvidia-cuda-12
-    container_name: liberty-localai
+  dada-server:
+    build: .
+    container_name: dada-server
     ports:
-      - "8080:8080"
+      - '8000:8000'
     environment:
-      - MODELS_PATH=/models
-      - THREADS=4
-      - DEBUG=true
+      - SERVER_PORT=8000
     volumes:
-      - ./localai/models:/models
-      - ./localai/config:/config
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      - .:/app
+    command: python server.py
     restart: unless-stopped
     networks:
-      - liberty-net
+      - dada-network
 
-  liberty-reach-node-1:
-    build: .
-    container_name: liberty-node-1
+  minima-node:
+    image: minima/minima:latest
+    container_name: minima-node
     ports:
-      - "8000:8000"
-    environment:
-      - RUST_LOG=info
-      - IDENTITY=node-1
-      - PORT=8000
-      - BOOTSTRAP=
-    depends_on:
-      localai:
-        condition: service_healthy
+      - '9001:9001'
+      - '8080:8080'
     volumes:
-      - ./data/node-1:/data
+      - minima-data:/minima
+    restart: unless-stopped
     networks:
-      - liberty-net
+      - dada-network
 
-  liberty-reach-node-2:
-    build: .
-    container_name: liberty-node-2
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
     ports:
-      - "8001:8000"
-    environment:
-      - RUST_LOG=info
-      - IDENTITY=node-2
-      - PORT=8000
-      - BOOTSTRAP=/dns4/liberty-node-1/tcp/8000
-    depends_on:
-      localai:
-        condition: service_healthy
-      liberty-reach-node-1:
-        condition: service_started
+      - '80:80'
+      - '443:443'
     volumes:
-      - ./data/node-2:/data
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - dada-server
     networks:
-      - liberty-net
+      - dada-network
 
 networks:
-  liberty-net:
+  dada-network:
     driver: bridge
+
+volumes:
+  minima-data:
