@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/chat_message.dart';
@@ -27,14 +27,14 @@ class MessageBubble extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(color: const Color(0xFFFEE500).withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.auto_awesome, size: 10, color: Color(0xFF8B7E00)),
-                        SizedBox(width: 3),
-                        Text('Gemma AI', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF8B7E00))),
-                      ],
-                    ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.auto_awesome, size: 10, color: Color(0xFF8B7E00)),
+                            const SizedBox(width: 3),
+                            Text(message.sender, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF8B7E00))),
+                          ],
+                        ),
                   ),
                 ],
               ),
@@ -80,8 +80,8 @@ class MessageBubble extends StatelessWidget {
                             padding: const EdgeInsets.only(bottom: 6),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.file(
-                                File(message.imagePaths.first),
+                              child: Image.memory(
+                                base64Decode(message.imagePaths.first),
                                 width: 200,
                                 height: 200,
                                 fit: BoxFit.cover,

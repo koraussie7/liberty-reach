@@ -102,7 +102,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _settingTile(
             icon: Icons.auto_awesome,
             title: 'AI 어시스턴트',
-            subtitle: 'LocalAI + Gemma-2-2B',
+            subtitle: 'Gemini 2.5 Flash + LocalAI',
             trailing: Switch(
               value: _aiEnabled,
               onChanged: (v) => setState(() => _aiEnabled = v),

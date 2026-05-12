@@ -13,7 +13,7 @@ crate-type = ["cdylib", "staticlib", "lib"]
 path = "src/lib.rs"
 
 [dependencies]
-flutter_rust_bridge = "=2.0.0"
+flutter_rust_bridge = "=2.12.0"
 libp2p = { version = "0.54", features = ["gossipsub", "noise", "yamux", "mdns", "kad", "tcp", "quic", "tokio", "macros"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }

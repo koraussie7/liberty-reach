@@ -4,6 +4,9 @@ import 'screens/chat_list_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/contacts_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/leaderboard_screen.dart';
+import 'screens/loops_screen.dart';
+import 'screens/loops_player_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,32 +26,50 @@ class LibertyReachApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
       home: const MainScreen(),
+      onGenerateRoute: _onGenerateRoute,
     );
   }
 
   ThemeData _buildTheme() {
     const primaryColor = Color(0xFFFEE500);
     return ThemeData(
-      brightness: Brightness.light,
+      brightness: Brightness.dark,
       primaryColor: primaryColor,
-      scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+      scaffoldBackgroundColor: const Color(0xFF0D0D0D),
       appBarTheme: const AppBarTheme(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.black87,
+        backgroundColor: Color(0xFF1A1A1A),
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: Colors.black87,
+          color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.w700,
         ),
       ),
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
-        brightness: Brightness.light,
+        brightness: Brightness.dark,
       ),
       useMaterial3: true,
     );
+  }
+
+  Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case '/loops/player':
+        final args = settings.arguments;
+        int index = 0;
+        if (args is int) {
+          index = args;
+        } else if (args is Map<String, dynamic>) {
+          index = args['index'] as int? ?? 0;
+        }
+        return MaterialPageRoute(
+          builder: (_) => LoopsPlayerScreen(videoIndex: index),
+        );
+    }
+    return null;
   }
 }
 
@@ -64,6 +85,8 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = const [
     ChatListScreen(),
+    LoopsScreen(),
+    LeaderboardScreen(),
     ContactsScreen(),
     SettingsScreen(),
   ];
@@ -75,23 +98,33 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFF1A1A1A),
         indicatorColor: const Color(0xFFFEE500).withOpacity(0.3),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.chat_outlined),
             selectedIcon: Icon(Icons.chat),
-            label: '채팅',
+            label: 'Chat',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.local_fire_department_outlined),
+            selectedIcon: Icon(Icons.local_fire_department),
+            label: 'Loops',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.emoji_events_outlined),
+            selectedIcon: Icon(Icons.emoji_events),
+            label: 'Ranking',
           ),
           NavigationDestination(
             icon: Icon(Icons.people_outline),
             selectedIcon: Icon(Icons.people),
-            label: '연락처',
+            label: 'Contacts',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
-            label: '설정',
+            label: 'Settings',
           ),
         ],
       ),

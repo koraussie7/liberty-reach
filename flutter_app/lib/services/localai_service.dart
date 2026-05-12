@@ -1,96 +1,102 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class LocalAIService {
-  String _baseUrl;
+  final String _baseUrl = 'https://muhantube.com';
   final http.Client _client;
   bool _lastHealth = false;
+  String _selectedModel = 'gemini-2.5-flash';
+  List<ModelInfo> _availableModels = [];
 
-  LocalAIService({String baseUrl = 'http://185.55.243.225:11434'})
-      : _baseUrl = baseUrl,
-        _client = http.Client();
+  LocalAIService() : _client = http.Client();
 
-  String get baseUrl => _baseUrl;
-  set baseUrl(String url) => _baseUrl = url;
+  String get selectedModel => _selectedModel;
+  List<ModelInfo> get availableModels => List.unmodifiable(_availableModels);
 
-  Future<String> generate(String prompt) async {
+  void selectModel(String modelId) {
+    _selectedModel = modelId;
+    debugPrint('[LocalAI] Model selected: $modelId');
+  }
+
+  Future<void> fetchModels() async {
     try {
       final response = await _client
-          .post(
-            Uri.parse('$_baseUrl/v1/chat/completions'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'model': 'llava:7b',
-              'messages': [{'role': 'user', 'content': prompt}],
-              'stream': false,
-              'max_tokens': 2048,
-              'temperature': 0.7,
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
-
+          .get(Uri.parse('$_baseUrl/ai/models'))
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['choices']?[0]?['message']?['content']?.toString().trim() ?? '(no response)';
-      } else {
-        return 'Error: ${response.statusCode}';
+        final list = data['data'] as List? ?? [];
+        _availableModels = list.map((m) => ModelInfo(
+          id: m['id'] as String? ?? 'unknown',
+          provider: m['provider'] as String? ?? 'local',
+        )).toList();
       }
-    } on SocketException {
-      return 'Server not reachable';
     } catch (e) {
-      debugPrint('AI error: $e');
-      return '(error)';
+      debugPrint('[LocalAI] Failed to fetch models: $e');
     }
   }
 
-  Future<String> generateMultimodal(String text, List<String> imagesBase64) async {
+  Future<String> generate(String prompt, {String? model, List<String>? images}) async {
+    final useModel = model ?? _selectedModel;
     try {
-      final List<Map<String, dynamic>> content = [
-        {'type': 'text', 'text': text}
-      ];
-      for (final img in imagesBase64) {
-        content.add({
-          'type': 'image_url',
-          'image_url': {'url': 'data:image/jpeg;base64,$img'}
-        });
+      final body = {
+        'model': useModel,
+        'messages': [{'role': 'user', 'content': prompt}],
+        'stream': false,
+        'max_tokens': 4096,
+        'temperature': 0.7,
+      };
+      if (images != null && images.isNotEmpty) {
+        body['messages'] = [{
+          'role': 'user',
+          'content': prompt,
+          'images': images,
+        }];
       }
 
       final response = await _client
           .post(
-            Uri.parse('$_baseUrl/v1/chat/completions'),
+            Uri.parse('$_baseUrl/ai/chat'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'model': 'llava:7b',
-              'messages': [{'role': 'user', 'content': content}],
-              'max_tokens': 4096,
-              'temperature': 0.7,
-            }),
+            body: jsonEncode(body),
           )
-          .timeout(const Duration(seconds: 60));
+          .timeout(const Duration(seconds: 120));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        if (data.containsKey('error')) {
+          return 'Error: ${data['error']}';
+        }
         return data['choices']?[0]?['message']?['content']?.toString().trim() ?? '(no response)';
       } else {
-        return 'Error: ${response.statusCode}';
+        final body = response.body;
+        try {
+          final err = jsonDecode(body);
+          return 'Error: ${err['error'] ?? response.statusCode}';
+        } catch (_) {
+          return 'Error: ${response.statusCode}';
+        }
       }
-    } on SocketException {
-      return 'Server not reachable';
     } catch (e) {
-      debugPrint('Multimodal error: $e');
-      return '(error)';
+      debugPrint('[LocalAI] AI error: $e');
+      return '(error: ${e.toString().replaceFirst(RegExp(r'^.+Exception: '), '')})';
     }
   }
 
   Future<bool> health() async {
     try {
       final response = await _client
-          .get(Uri.parse('$_baseUrl/api/tags'))
+          .get(Uri.parse('$_baseUrl/health'))
           .timeout(const Duration(seconds: 5));
-      _lastHealth = response.statusCode == 200;
-      return _lastHealth;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _lastHealth = data['status'] == 'healthy';
+        return _lastHealth;
+      }
+      _lastHealth = false;
+      return false;
     } catch (_) {
       _lastHealth = false;
       return false;
@@ -99,5 +105,20 @@ class LocalAIService {
 
   void dispose() {
     _client.close();
+  }
+}
+
+class ModelInfo {
+  final String id;
+  final String provider;
+
+  ModelInfo({required this.id, required this.provider});
+
+  bool get isGemini => provider == 'google';
+  bool get isLocalAI => provider == 'local';
+
+  String get displayName {
+    if (isGemini) return 'Gemini ${id.replaceAll('gemini-', '').replaceAll('-', ' ').replaceAll('pro', 'Pro').replaceAll('flash', 'Flash')}';
+    return id;
   }
 }

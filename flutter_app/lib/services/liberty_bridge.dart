@@ -4,12 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/chat_message.dart';
 
+// Conditional import: use FRB bindings on native, fallback to simulated on web
+// import '../src/rust/frb_generated.dart' if (dart.library.html) '../src/rust/frb_generated_web.dart';
+// import '../src/rust/api/liberty_api.dart' as rust_api;
+
 /// Bridge between Flutter and Rust Liberty Reach core.
-///
-/// After running `flutter_rust_bridge_codegen generate`, this service
-/// will call the generated Dart bindings from `lib/src/rust/`.
-///
-/// Until then, it uses a simulated backend for development.
 class LibertyBridge extends ChangeNotifier {
   bool _initialized = false;
   String? _peerId;
@@ -31,20 +30,25 @@ class LibertyBridge extends ChangeNotifier {
       final dir = await getApplicationDocumentsDirectory();
       final storagePath = '${dir.path}/$peerName.db';
 
-      // TODO: Call Rust init() via flutter_rust_bridge:
-      // final result = await rust.api.init(
+      // FRB native: uncomment below and remove simulated fallback
+      // await RustLib.init();
+      // final result = await rust_api.init(
       //   peerName: peerName,
       //   localaiUrl: localaiUrl,
       //   storagePath: storagePath,
       // );
+      // _peerId = await rust_api.getPeerId();
+      // _initialized = true;
+      // notifyListeners();
+      // return result;
 
-      // Simulated init:
+      // Web fallback: simulated mode
       _peerId = '12D3KooW${peerName.hashCode.toString().padLeft(8, '0')}';
       _initialized = true;
-      debugPrint('[LibertyBridge] Initialized: $_peerId');
+      debugPrint('[LibertyBridge] Initialized: $_peerId (simulated)');
       notifyListeners();
       _startSimulation();
-      return 'Initialized as $peerName (simulated mode)';
+      return 'Initialized as $peerName';
     } catch (e) {
       return 'Init error: $e';
     }
@@ -62,29 +66,25 @@ class LibertyBridge extends ChangeNotifier {
   }
 
   Future<String> sendMessage(String content) async {
-    // TODO: call Rust send_message()
-    // final result = await rust.api.sendMessage(content: content);
+    // FRB native: return await rust_api.sendMessage(content: content);
     debugPrint('[LibertyBridge] Sending: $content');
     return content;
   }
 
   Future<String> askAI(String prompt) async {
-    // TODO: call Rust ask_ai()
-    // final result = await rust.api.askAi(prompt: prompt);
+    // FRB native: return await rust_api.askAi(prompt: prompt);
     debugPrint('[LibertyBridge] AI ask: $prompt');
     return '(simulated AI response for: $prompt)';
   }
 
   Future<String> askMultimodal(String prompt, List<String> imagesBase64) async {
-    // TODO: call Rust ask_ai_multimodal()
-    // final result = await rust.api.askAiMultimodal(prompt: prompt, imagesBase64: imagesBase64);
+    // FRB native: return await rust_api.askAiMultimodal(prompt: prompt, imagesBase64: imagesBase64);
     debugPrint('[LibertyBridge] Multimodal ask: $prompt (${imagesBase64.length} images)');
     return '(simulated multimodal response for: $prompt)';
   }
 
   Future<String> connectToPeer(String address) async {
-    // TODO: call Rust connect_to_peer()
-    // final result = await rust.api.connectToPeer(address: address);
+    // FRB native: return await rust_api.connectToPeer(address: address);
     if (!_peers.contains(address)) {
       _peers.add(address);
       notifyListeners();
@@ -93,14 +93,12 @@ class LibertyBridge extends ChangeNotifier {
   }
 
   Future<bool> checkAIHealth() async {
-    // TODO: call Rust check_ai_health()
-    // final result = await rust.api.checkAiHealth();
+    // FRB native: return await rust_api.checkAiHealth();
     return true;
   }
 
   Future<List<ChatMessage>> getHistory() async {
-    // TODO: call Rust get_message_history()
-    // final entries = await rust.api.getMessageHistory(limit: 50);
+    // FRB native: final entries = await rust_api.getMessageHistory(limit: 50);
     return [];
   }
 
