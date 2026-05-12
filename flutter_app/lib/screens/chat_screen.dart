@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -32,17 +33,19 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final LocalAIService _ai = LocalAIService();
   final ChatService _chat = ChatService();
-  final ImagePicker _picker = ImagePicker();
   final Uuid _uuid = const Uuid();
+  final ImagePicker _picker = ImagePicker();
 
   bool _isAiReady = false;
   bool _isLoading = false;
+  List<String> _pendingImages = [];
   StreamSubscription? _chatSub;
 
   @override
   void initState() {
     super.initState();
     _checkHealth();
+    _ai.fetchModels();
     _chatSub = _chat.messages.listen((msg) {
       if (mounted) _addMessage(msg);
     });
@@ -64,6 +67,12 @@ class _ChatScreenState extends State<ChatScreen> {
     if (mounted) setState(() => _isAiReady = ok);
   }
 
+  String get _modelName {
+    final m = _ai.selectedModel;
+    if (m.startsWith('gemini')) return 'Gemini';
+    return m;
+  }
+
   void _addMessage(ChatMessage msg) {
     setState(() => _messages.add(msg));
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -78,53 +87,60 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _pickImage() async {
-    final src = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(leading: const Icon(Icons.camera_alt), title: const Text('Take photo'), onTap: () => Navigator.pop(ctx, ImageSource.camera)),
-          ListTile(leading: const Icon(Icons.photo_library), title: const Text('Choose from gallery'), onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
-        ]),
-      ),
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
     );
-    if (src == null) return;
-    final file = await _picker.pickImage(source: src, maxWidth: 1024);
-    if (file == null) return;
-    await _sendImageFile(file);
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      final b64 = base64Encode(bytes);
+      if (mounted) {
+        setState(() => _pendingImages.add(b64));
+      }
+    }
   }
 
-  Future<void> _sendImageFile(XFile file) async {
-    setState(() => _isLoading = true);
-    final prompt = _textController.text.trim().isEmpty ? 'Describe this image' : _textController.text.trim();
-    _textController.clear();
-
-    final bytes = await file.readAsBytes();
-    final b64 = base64Encode(bytes);
-
-    _addMessage(ChatMessage(id: _uuid.v4(), sender: 'me', content: prompt, isMe: true, imagePaths: [file.path]));
-    _addMessage(ChatMessage(id: _uuid.v4(), sender: 'LLaVA AI', content: 'Analyzing...', isMe: false, isAI: true, isLoading: true));
-
-    final response = await _ai.generateMultimodal(prompt, [b64]);
-
-    if (mounted) {
-      setState(() {
-        _messages.removeWhere((m) => m.isLoading);
-        _addMessage(ChatMessage(id: _uuid.v4(), sender: 'LLaVA AI', content: response, isMe: false, isAI: true));
-        _isLoading = false;
-      });
+  Future<void> _pickCamera() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.camera,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      final b64 = base64Encode(bytes);
+      if (mounted) {
+        setState(() => _pendingImages.add(b64));
+      }
     }
+  }
+
+  void _removePendingImage(int index) {
+    setState(() => _pendingImages.removeAt(index));
   }
 
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
-    if (text.isEmpty || _isLoading) return;
+    if ((text.isEmpty && _pendingImages.isEmpty) || _isLoading) return;
     _textController.clear();
 
-    _addMessage(ChatMessage(id: _uuid.v4(), sender: 'me', content: text, isMe: true));
+    final userMsg = ChatMessage(
+      id: _uuid.v4(),
+      sender: 'me',
+      content: text,
+      isMe: true,
+      imagePaths: List.from(_pendingImages),
+    );
+    _addMessage(userMsg);
 
-    if (widget.isAI || text.startsWith('@llava ') || text.startsWith('@ai ')) {
-      final prompt = text.replaceFirst(RegExp(r'^@(llava|ai)\s'), '');
-      await _getAiResponse(prompt);
+    final hadImages = _pendingImages.isNotEmpty;
+    final imagesToSend = List<String>.from(_pendingImages);
+    setState(() => _pendingImages = []);
+
+    if (widget.isAI || text.startsWith('@gemma ') || text.startsWith('@ai ') || text.startsWith('@gemini ') || hadImages) {
+      final prompt = text.replaceFirst(RegExp(r'^@(gemma|ai|gemini)\s'), '');
+      await _getAiResponse(prompt, images: hadImages ? imagesToSend : null);
     } else {
       _chat.send(text, widget.peerId);
       Future.delayed(const Duration(seconds: 1), () {
@@ -133,17 +149,17 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> _getAiResponse(String prompt) async {
+  Future<void> _getAiResponse(String prompt, {List<String>? images}) async {
     setState(() => _isLoading = true);
     final lid = _uuid.v4();
-    _addMessage(ChatMessage(id: lid, sender: 'LLaVA AI', content: '...', isMe: false, isAI: true, isLoading: true));
+    _addMessage(ChatMessage(id: lid, sender: _modelName, content: '...', isMe: false, isAI: true, isLoading: true));
 
-    final resp = await _ai.generate(prompt);
+    final resp = await _ai.generate(prompt, images: images);
 
     if (mounted) {
       setState(() {
         _messages.removeWhere((m) => m.id == lid);
-        _addMessage(ChatMessage(id: _uuid.v4(), sender: 'LLaVA AI', content: resp, isMe: false, isAI: true));
+        _addMessage(ChatMessage(id: _uuid.v4(), sender: _modelName, content: resp, isMe: false, isAI: true));
         _isLoading = false;
       });
     }
@@ -162,21 +178,58 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Icon(widget.isAI ? Icons.auto_awesome : Icons.person, color: Colors.black54, size: 20),
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.peerName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                Row(
-                  children: [
-                    Container(width: 6, height: 6, decoration: BoxDecoration(
-                      color: _isAiReady ? const Color(0xFF4CAF50) : Colors.grey[400], shape: BoxShape.circle,
-                    )),
-                    const SizedBox(width: 4),
-                    Text(_isAiReady ? 'LLaVA Ready' : 'Offline', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-                  ],
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.peerName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  Row(
+                    children: [
+                      Container(width: 6, height: 6, decoration: BoxDecoration(
+                        color: _isAiReady ? const Color(0xFF4CAF50) : Colors.grey[400], shape: BoxShape.circle,
+                      )),
+                      const SizedBox(width: 4),
+                      Text(_isAiReady ? '$_modelName Ready' : 'Offline', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                    ],
+                  ),
+                ],
+              ),
             ),
+            if (widget.isAI)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.model_training, size: 20, color: Colors.black54),
+                tooltip: 'Select model',
+                onSelected: (m) {
+                  _ai.selectModel(m);
+                  setState(() {});
+                },
+                itemBuilder: (ctx) => _ai.availableModels.map((m) {
+                  return PopupMenuItem(
+                    value: m.id,
+                    child: Row(
+                      children: [
+                        Icon(
+                          m.isGemini ? Icons.auto_awesome : Icons.memory,
+                          size: 16,
+                          color: m.id == _ai.selectedModel ? const Color(0xFFFEE500) : Colors.grey,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            m.displayName,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: m.id == _ai.selectedModel ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                        if (m.id == _ai.selectedModel)
+                          const Icon(Icons.check, size: 14, color: Color(0xFFFEE500)),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
           ],
         ),
       ),
@@ -191,7 +244,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
                   const SizedBox(width: 8),
-                  Text('Cannot connect to 185.55.243.225:8081', style: TextStyle(fontSize: 12, color: Colors.orange[800])),
+                  Text('AI server offline', style: TextStyle(fontSize: 12, color: Colors.orange[800])),
                 ],
               ),
             ),
@@ -203,7 +256,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       children: [
                         Icon(widget.isAI ? Icons.auto_awesome : Icons.chat, size: 48, color: Colors.grey[300]),
                         const SizedBox(height: 12),
-                        Text(widget.isAI ? 'Send text or image' : 'Send a message', style: TextStyle(fontSize: 14, color: Colors.grey[400])),
+                        Text('Send a message', style: TextStyle(fontSize: 14, color: Colors.grey[400])),
+                        if (widget.isAI) ...[
+                          const SizedBox(height: 4),
+                          Text('Images are analyzed with $_modelName', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                        ],
                       ],
                     ),
                   )
@@ -217,6 +274,40 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
           ),
+          if (_pendingImages.isNotEmpty)
+            Container(
+              height: 80,
+              color: Colors.grey[50],
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                itemCount: _pendingImages.length,
+                itemBuilder: (_, i) => Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          base64Decode(_pendingImages[i]),
+                          width: 64, height: 64, fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0, right: 0,
+                      child: GestureDetector(
+                        onTap: () => _removePendingImage(i),
+                        child: Container(
+                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                          child: const Icon(Icons.close, size: 16, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           _buildInput(),
         ],
       ),
@@ -232,7 +323,20 @@ class _ChatScreenState extends State<ChatScreen> {
       padding: EdgeInsets.only(left: 4, right: 8, top: 8, bottom: MediaQuery.of(context).padding.bottom + 8),
       child: Row(
         children: [
-          IconButton(icon: const Icon(Icons.add_circle_outline, color: Colors.grey), onPressed: widget.isAI ? _pickImage : null),
+          if (widget.isAI)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.add_circle_outline, color: Colors.grey),
+              tooltip: 'Add image',
+              onSelected: (v) {
+                if (v == 'gallery') _pickImage();
+                if (v == 'camera') _pickCamera();
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'gallery', child: ListTile(leading: Icon(Icons.photo_library), title: Text('Gallery'), dense: true)),
+                const PopupMenuItem(value: 'camera', child: ListTile(leading: Icon(Icons.camera_alt), title: Text('Camera'), dense: true)),
+              ],
+            ),
+          const SizedBox(width: 4),
           Expanded(
             child: Container(
               decoration: BoxDecoration(color: const Color(0xFFF0F0F0), borderRadius: BorderRadius.circular(20)),
@@ -242,11 +346,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 maxLines: null,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _sendMessage(),
-                decoration: const InputDecoration(
-                  hintText: 'Message...',
-                  hintStyle: TextStyle(color: Colors.grey),
+                decoration: InputDecoration(
+                  hintText: widget.isAI ? 'Ask $_modelName...' : 'Message...',
+                  hintStyle: const TextStyle(color: Colors.grey),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
               ),
             ),

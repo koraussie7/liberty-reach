@@ -1,6 +1,8 @@
 use crate::p2p::swarm::P2PSwarm;
 use crate::ai::localai::LocalAIClient;
 use crate::storage::sqlite::SqliteStorage;
+use crate::blockchain::minima_service::MinimaService;
+use crate::reward::reward_service::{RewardService, ActionType};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -13,6 +15,7 @@ pub struct LibertyCore {
     pub swarm: Option<Arc<RwLock<P2PSwarm>>>,
     pub ai: Option<LocalAIClient>,
     pub storage: Option<Arc<RwLock<SqliteStorage>>>,
+    pub reward: Option<RewardService>,
     pub peer_name: String,
     pub is_initialized: bool,
 }
@@ -23,6 +26,7 @@ impl LibertyCore {
             swarm: None,
             ai: None,
             storage: None,
+            reward: None,
             peer_name: String::new(),
             is_initialized: false,
         }
@@ -207,4 +211,211 @@ pub struct MessageEntry {
     pub content: String,
     pub is_ai: bool,
     pub timestamp: String,
+}
+
+// ── Minima / DADA Point Reward API ──────────────────────────────────────────
+
+/// Initialize the Minima blockchain connection for DADA Point rewards.
+/// Call after `init()`. `minima_url` is the Minima node RPC endpoint
+/// (e.g. "http://localhost:8080" from Docker, or "https://your-node:1822").
+#[flutter_rust_bridge::frb]
+pub async fn init_minima(minima_url: String) -> String {
+    let mut core = INSTANCE.write().await;
+    let minima = MinimaService::new(&minima_url);
+    let reward = RewardService::new(minima.clone());
+
+    let healthy = reward.health().await;
+    core.reward = Some(reward);
+
+    if healthy {
+        match minima.get_address().await {
+            Ok(addr) => format!("Minima connected: {}", addr),
+            Err(e) => format!("Minima reachable but address error: {}", e),
+        }
+    } else {
+        "Minima node unreachable — rewards will be queued".to_string()
+    }
+}
+
+/// Get the local Minima node address
+#[flutter_rust_bridge::frb]
+pub async fn get_minima_address() -> String {
+    let core = INSTANCE.read().await;
+    match &core.reward {
+        Some(r) => match r.get_minima_address().await {
+            Ok(addr) => addr,
+            Err(e) => format!("error: {}", e),
+        },
+        None => "Minima not initialized".to_string(),
+    }
+}
+
+/// DADA Point balance info
+#[flutter_rust_bridge::frb]
+pub struct DADABalance {
+    pub balance: u64,
+    pub address: String,
+}
+
+/// Get the current DADA Point balance for the local Minima node
+#[flutter_rust_bridge::frb]
+pub async fn get_dada_balance() -> DADABalance {
+    let core = INSTANCE.read().await;
+    match &core.reward {
+        Some(r) => {
+            let addr = r.get_minima_address().await.unwrap_or_default();
+            let bal = r.get_dada_balance().await.unwrap_or(0);
+            DADABalance {
+                balance: bal,
+                address: addr,
+            }
+        }
+        None => DADABalance {
+            balance: 0,
+            address: String::new(),
+        },
+    }
+}
+
+/// Result of a reward action
+#[flutter_rust_bridge::frb]
+pub struct RewardResult {
+    pub points_earned: u32,
+    pub tx_id: String,
+    pub action: String,
+    pub success: bool,
+    pub error: String,
+}
+
+/// Reward a user for watching a Loop video.
+/// `user_address` is the Minima address to send DADA Points to.
+/// `video_cid` is the content identifier for the video.
+/// `seconds` is the watch duration in seconds.
+#[flutter_rust_bridge::frb]
+pub async fn reward_for_watch(
+    user_address: String,
+    video_cid: String,
+    seconds: u32,
+) -> RewardResult {
+    let core = INSTANCE.read().await;
+    match &core.reward {
+        Some(r) => {
+            match r
+                .issue_reward(&user_address, &ActionType::WatchVideo, seconds, &video_cid)
+                .await
+            {
+                Ok(result) => RewardResult {
+                    points_earned: result.points_earned,
+                    tx_id: result.tx_id,
+                    action: result.action,
+                    success: true,
+                    error: String::new(),
+                },
+                Err(e) => RewardResult {
+                    points_earned: 0,
+                    tx_id: String::new(),
+                    action: "watch".to_string(),
+                    success: false,
+                    error: e,
+                },
+            }
+        }
+        None => RewardResult {
+            points_earned: 0,
+            tx_id: String::new(),
+            action: "watch".to_string(),
+            success: false,
+            error: "Minima not initialized".to_string(),
+        },
+    }
+}
+
+/// Reward a user for an AI chat interaction
+#[flutter_rust_bridge::frb]
+pub async fn reward_for_ai_chat(
+    user_address: String,
+    chat_id: String,
+    seconds: u32,
+) -> RewardResult {
+    let core = INSTANCE.read().await;
+    match &core.reward {
+        Some(r) => {
+            match r
+                .issue_reward(&user_address, &ActionType::AIChat, seconds, &chat_id)
+                .await
+            {
+                Ok(result) => RewardResult {
+                    points_earned: result.points_earned,
+                    tx_id: result.tx_id,
+                    action: result.action,
+                    success: true,
+                    error: String::new(),
+                },
+                Err(e) => RewardResult {
+                    points_earned: 0,
+                    tx_id: String::new(),
+                    action: "ai".to_string(),
+                    success: false,
+                    error: e,
+                },
+            }
+        }
+        None => RewardResult {
+            points_earned: 0,
+            tx_id: String::new(),
+            action: "ai".to_string(),
+            success: false,
+            error: "Minima not initialized".to_string(),
+        },
+    }
+}
+
+/// Reward a user for P2P message relay
+#[flutter_rust_bridge::frb]
+pub async fn reward_for_relay(
+    user_address: String,
+    relay_id: String,
+    seconds: u32,
+) -> RewardResult {
+    let core = INSTANCE.read().await;
+    match &core.reward {
+        Some(r) => {
+            match r
+                .issue_reward(&user_address, &ActionType::P2PRelay, seconds, &relay_id)
+                .await
+            {
+                Ok(result) => RewardResult {
+                    points_earned: result.points_earned,
+                    tx_id: result.tx_id,
+                    action: result.action,
+                    success: true,
+                    error: String::new(),
+                },
+                Err(e) => RewardResult {
+                    points_earned: 0,
+                    tx_id: String::new(),
+                    action: "relay".to_string(),
+                    success: false,
+                    error: e,
+                },
+            }
+        }
+        None => RewardResult {
+            points_earned: 0,
+            tx_id: String::new(),
+            action: "relay".to_string(),
+            success: false,
+            error: "Minima not initialized".to_string(),
+        },
+    }
+}
+
+/// Check if Minima node is healthy
+#[flutter_rust_bridge::frb]
+pub async fn check_minima_health() -> bool {
+    let core = INSTANCE.read().await;
+    match &core.reward {
+        Some(r) => r.health().await,
+        None => false,
+    }
 }
