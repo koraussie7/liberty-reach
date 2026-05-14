@@ -38,8 +38,11 @@ fn load_or_create_keypair(identity_name: &str, storage_path: &str) -> anyhow::Re
     let keypair = identity::Keypair::generate_ed25519();
     let secret_bytes = keypair.secret().as_ref();
     if secret_bytes.len() == 32 {
-        let _ = std::fs::write(&key_path, secret_bytes);
-        println!("[P2P] Generated new identity key at {:?}", key_path);
+        if let Err(e) = std::fs::write(&key_path, secret_bytes) {
+            eprintln!("[P2P] Failed to save identity key to {:?}: {}", key_path, e);
+        } else {
+            println!("[P2P] Generated new identity key at {:?}", key_path);
+        }
     }
     Ok(keypair)
 }
@@ -259,12 +262,14 @@ async fn handle_swarm_event(
                 println!("[P2P] Msg from {}: {}", sender, if content.len() > 50 { format!("{}...", &content[..50]) } else { content.clone() });
 
                 // Forward to Flutter via channel
-                let _ = msg_tx.send(ReceivedMessage {
+                if let Err(e) = msg_tx.send(ReceivedMessage {
                     sender,
                     content,
                     timestamp,
                     is_ai_command,
-                });
+                }) {
+                    eprintln!("[P2P] Failed to forward incoming message to Flutter: {}", e);
+                }
             }
         }
         SwarmEvent::Behaviour(P2PBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
@@ -273,7 +278,9 @@ async fn handle_swarm_event(
                 // Re-subscribe to topic for newly discovered peers
                 let mut swarm = p2p_handle.write().await;
                 let topic = gossipsub::IdentTopic::new(CHAT_TOPIC);
-                let _ = swarm.swarm.behaviour_mut().gossipsub.subscribe(&topic);
+                if let Err(e) = swarm.swarm.behaviour_mut().gossipsub.subscribe(&topic) {
+                    eprintln!("[P2P] Failed to re-subscribe topic after mDNS discovery: {}", e);
+                }
             }
         }
         SwarmEvent::Behaviour(P2PBehaviourEvent::Mdns(mdns::Event::Expired(list))) => {

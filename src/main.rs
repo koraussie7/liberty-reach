@@ -80,17 +80,21 @@ async fn main() -> anyhow::Result<()> {
             if line.is_empty() { continue; }
 
             if line == "/exit" || line == "/quit" {
-                let _ = msg_tx.send(p2p::swarm::AppEvent::Shutdown);
+                if let Err(e) = msg_tx.send(p2p::swarm::AppEvent::Shutdown) {
+                    eprintln!("[Main] Failed to send shutdown event: {}", e);
+                }
                 break;
             }
 
             if line.starts_with("/") {
                 handle_command(&line, &p2p_handle, &msg_tx, &storage, &ai_client, &identity).await;
             } else {
-                let _ = msg_tx.send(p2p::swarm::AppEvent::SendMessage {
+                if let Err(e) = msg_tx.send(p2p::swarm::AppEvent::SendMessage {
                     content: line.clone(),
                     peer_id: None,
-                });
+                }) {
+                    eprintln!("[Main] Failed to send message: {}", e);
+                }
             }
         }
     };
