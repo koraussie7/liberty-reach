@@ -82,6 +82,44 @@ class HybridAIService extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> orchestrate({
+    required String prompt,
+    String? systemPrompt,
+  }) async {
+    try {
+      final body = {
+        'messages': [
+          if (systemPrompt != null) {'role': 'system', 'content': systemPrompt},
+          {'role': 'user', 'content': prompt},
+        ],
+        'max_tokens': 8192,
+      };
+
+      final response = await _client
+          .post(
+            Uri.parse('$_baseUrl/ai/orchestrate'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 180));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'plan': data['plan']?.toString().trim() ?? '',
+          'code': data['code']?.toString().trim() ?? '',
+          'commands': data['commands']?.toString().trim() ?? '',
+          'review': data['review']?.toString().trim() ?? '',
+          'raw': data['raw']?.toString().trim() ?? '(no response)',
+        };
+      }
+      return {'error': '(HTTP ${response.statusCode})'};
+    } catch (e) {
+      debugPrint('[HybridAI] Orchestrate error: $e');
+      return {'error': '(error: $e)'};
+    }
+  }
+
   @override
   void dispose() {
     _client.close();

@@ -416,6 +416,73 @@ async def opencode_zen(request: dict):
 
 # ── Hybrid Code Assist (Hermes + OpenCode + Ollama) ─────────────────────────
 
+MULTI_AGENT_ORCHESTRATOR_PROMPT = """You are the DADA-AI project's Multi-Agent Orchestrator.
+You operate three internal expert agents — Hermes, OpenCode, and OpenClaw — collaborating to handle user requests efficiently.
+
+## Agent Roles
+
+**1. Hermes (Chief Architect)**
+- Strategy formulation, system architecture design
+- Planning, risk analysis, code review, final approval
+- Keywords: architecture, design, strategy, plan, structure
+
+**2. OpenCode (Senior Coding Agent)**
+- High-quality code production (Rust, Flutter, Dart, Python)
+- Clean Code, Best Practices, Production Ready
+- Refactoring, optimization
+- Keywords: implement, function, module, code
+
+**3. OpenClaw (Executor Agent)**
+- File creation, command execution, testing
+- Git commit, Docker build, test execution
+- Report errors immediately
+- Keywords: execute, create, test, git, docker, build, deploy
+
+## Workflow (mandatory order)
+
+All work follows: Hermes → OpenCode → OpenClaw → Hermes Review
+
+Structure every response as:
+
+### 1. Hermes Analysis
+(architecture, plan, strategy)
+
+### 2. OpenCode Implementation
+(code or code instructions)
+
+### 3. OpenClaw Execution Plan
+(commands to run, files to create)
+
+### 4. Final Review & Next Step
+
+## Principles
+- Liberty Reach P2P, Multi-Agent, AI Live Commerce, decentralization first
+- Rust/Flutter Best Practices and security as top priority
+- Concise, professional, specific responses
+- Transparent progress reporting"""
+
+CODECODE_AGENT_PROMPTS = {
+    "orchestrate": MULTI_AGENT_ORCHESTRATOR_PROMPT,
+    "code": (
+        "You are Hermes, an elite coding assistant integrated into Liberty Reach messenger. "
+        "Write clean, production-ready code. Explain your reasoning briefly. "
+        "Provide complete, runnable code examples."
+    ),
+    "debug": (
+        "You are Hermes Debugger. Find the root cause of bugs and errors. "
+        "Explain why the issue occurs, then provide the fix with a brief explanation."
+    ),
+    "architect": (
+        "You are Hermes System Architect. Design scalable, maintainable system architectures. "
+        "Include component relationships, data flow, and technology choices with rationale."
+    ),
+    "execute": (
+        "You are OpenClaw, the DADA-AI project's Executor Agent. "
+        "Your job is to create files, run commands, execute tests, and manage git/docker operations. "
+        "Always report errors immediately. Follow Hermes and OpenCode instructions precisely."
+    ),
+}
+
 CODE_KEYWORDS = [
     "code", "function", "bug", "error", "implement", "refactor",
     "architecture", "debug", "컴파일", "에러", "코드", "함수",
@@ -431,21 +498,10 @@ DEBUG_KEYWORDS = [
     "failed", "fail", "crash",
 ]
 
-CODECODE_AGENT_PROMPTS = {
-    "code": (
-        "You are Hermes, an elite coding assistant integrated into Liberty Reach messenger. "
-        "Write clean, production-ready code. Explain your reasoning briefly. "
-        "Provide complete, runnable code examples."
-    ),
-    "debug": (
-        "You are Hermes Debugger. Find the root cause of bugs and errors. "
-        "Explain why the issue occurs, then provide the fix with a brief explanation."
-    ),
-    "architect": (
-        "You are Hermes System Architect. Design scalable, maintainable system architectures. "
-        "Include component relationships, data flow, and technology choices with rationale."
-    ),
-}
+EXECUTE_KEYWORDS = [
+    "execute", "create", "build", "deploy", "test", "git", "docker",
+    "실행", "만들어", "테스트", "배포",
+]
 
 def _detect_intent(text: str) -> str:
     lower = text.lower()
@@ -513,38 +569,36 @@ async def code_assist(request: dict):
         mode = request.get("mode", "auto")
         user_text = messages[-1].get("content", "")
 
+        # Client-supplied system prompt overrides the default
+        client_system = request.get("system")
+
         # Step 1: Auto-detect intent
         if mode == "auto":
             mode = _detect_intent(user_text)
 
         # Step 2: Route
-        if mode in ("code", "debug", "architect"):
+        if mode in ("orchestrate", "code", "debug", "architect", "execute"):
+            system_prompt = client_system or CODECODE_AGENT_PROMPTS.get(mode, CODECODE_AGENT_PROMPTS["code"])
+
             if not OPENCODE_API_KEY:
-                # Fallback to local if OpenCode not configured
                 local_body = {
                     "model": "qwen2.5-coder:7b",
-                    "messages": messages,
+                    "messages": [{"role": "system", "content": system_prompt}] + messages,
                     "temperature": 0.65,
                     "max_tokens": 4096,
                 }
                 c = get_http_client()
                 resp = await c.post(f"{LOCALAI_URL}/v1/chat/completions", json=local_body)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    reply = data["choices"][0]["message"]["content"]
-                else:
-                    reply = f"(local error: {resp.status_code})"
+                reply = resp.json()["choices"][0]["message"]["content"] if resp.status_code == 200 else f"(local error: {resp.status_code})"
             else:
-                result = await _call_opencode(messages, CODECODE_AGENT_PROMPTS[mode])
+                result = await _call_opencode(messages, system_prompt)
                 if "error" in result:
                     return result
                 reply = result["reply"]
-                # Optional: verify code mode with local Qwen
                 if mode == "code":
                     reply = await _verify_with_local(user_text, reply)
-            return {"reply": reply, "mode": mode, "provider": "opencode"}
+            return {"reply": reply, "mode": mode, "provider": "opencode", "agent": mode}
         else:
-            # Normal mode → existing LocalAI
             local_body = {
                 "model": request.get("model", "gemma3:4b"),
                 "messages": messages,
@@ -558,6 +612,82 @@ async def code_assist(request: dict):
             return {"reply": reply, "mode": "normal", "provider": "local"}
     except Exception as e:
         log.error(f"Code assist error: {e}")
+        return {"error": str(e)}
+
+# ── Multi-Agent Orchestrator ──────────────────────────────────────────────────
+
+ORCHESTRATOR_SYSTEM_PROMPT = """You are the DADA-AI Orchestrator. You manage three agents:
+- Hermes (architect/strategy)
+- OpenCode (implementation)
+- OpenClaw (execution)
+
+For every request, respond in this exact structured format:
+
+### 1. Hermes Plan
+<architecture analysis and step-by-step plan>
+
+### 2. OpenCode Code
+<code implementation with complete, production-ready code blocks>
+
+### 3. OpenClaw Commands
+<shell commands to execute, files to create, operations to run>
+
+### 4. Hermes Review
+<quality check, potential issues, next steps>
+
+Be specific and actionable. Include complete code and exact commands."""
+
+@app.post("/ai/orchestrate")
+async def ai_orchestrate(request: dict):
+    if not request.get("messages"):
+        return {"error": "messages is required"}
+    try:
+        messages = request["messages"]
+        user_text = messages[-1].get("content", "")
+        system_prompt = request.get("system") or ORCHESTRATOR_SYSTEM_PROMPT
+
+        if not OPENCODE_API_KEY:
+            local_body = {
+                "model": "qwen2.5-coder:7b",
+                "messages": [{"role": "system", "content": system_prompt}] + messages,
+                "temperature": 0.65,
+                "max_tokens": 8192,
+            }
+            c = get_http_client()
+            resp = await c.post(f"{LOCALAI_URL}/v1/chat/completions", json=local_body)
+            raw = resp.json()["choices"][0]["message"]["content"] if resp.status_code == 200 else f"(local error: {resp.status_code})"
+        else:
+            result = await _call_opencode(messages, system_prompt)
+            if "error" in result:
+                return result
+            raw = result["reply"]
+
+        sections = {"plan": "", "code": "", "commands": "", "review": ""}
+        current = None
+        for line in raw.split("\n"):
+            ll = line.strip()
+            if "hermes plan" in ll.lower() or "1. hermes" in ll.lower():
+                current = "plan"
+            elif "opencode code" in ll.lower() or "2. opencode" in ll.lower():
+                current = "code"
+            elif "openclaw" in ll.lower() or "3. openclaw" in ll.lower():
+                current = "commands"
+            elif "hermes review" in ll.lower() or "4. hermes" in ll.lower():
+                current = "review"
+            elif current:
+                sections[current] += line + "\n"
+
+        return {
+            "plan": sections["plan"].strip(),
+            "code": sections["code"].strip(),
+            "commands": sections["commands"].strip(),
+            "review": sections["review"].strip(),
+            "raw": raw,
+            "model": OPENCODE_MODEL,
+            "provider": "opencode",
+        }
+    except Exception as e:
+        log.error(f"Orchestrator error: {e}")
         return {"error": str(e)}
 
 # ── Preference Model ────────────────────────────────────────────────────────
