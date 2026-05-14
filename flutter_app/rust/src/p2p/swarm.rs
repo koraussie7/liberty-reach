@@ -44,19 +44,12 @@ fn load_or_create_keypair(identity_name: &str, storage_path: &str) -> anyhow::Re
     Ok(keypair)
 }
 
-fn get_key_path(identity_name: &str, storage_path: &str) -> PathBuf {
-    // Use storage_path directory if provided, otherwise use HOME
-    let base = if storage_path.is_empty() {
-        let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-        PathBuf::from(home)
-    } else {
-        let p = PathBuf::from(storage_path);
-        if p.is_dir() { p } else { p.parent().unwrap_or(PathBuf::from("/tmp").as_path()).to_path_buf() }
-    };
+fn get_key_path(identity_name: &str, _storage_path: &str) -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
     let safe_name: String = identity_name.chars()
         .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
         .collect();
-    base.join(KEY_DIR).join(format!("{}.key", safe_name))
+    PathBuf::from(home).join(KEY_DIR).join(format!("{}.key", safe_name))
 }
 
 /// Events that the application layer can send to the swarm
