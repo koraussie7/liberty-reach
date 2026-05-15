@@ -2,14 +2,16 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:uuid/uuid.dart';
+import '../services/chat_service.dart';
 
 part 'chat_event.dart';
 part 'chat_state.dart';
 
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final Uuid _uuid = const Uuid();
+  final ChatService _chatService;
 
-  ChatBloc() : super(const ChatState()) {
+  ChatBloc(this._chatService) : super(const ChatState()) {
     on<SendMessageEvent>(_onSendMessage);
     on<ReceiveMessageEvent>(_onReceiveMessage);
     on<LoadMessagesEvent>(_onLoadMessages);
@@ -22,6 +24,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       senderId: event.senderId,
       senderName: event.senderName,
     );
+    _chatService.send(event.content, event.groupId);
     emit(state.copyWith(
       messages: [...state.messages, message],
     ));
@@ -36,9 +39,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   Future<void> _onLoadMessages(LoadMessagesEvent event, Emitter<ChatState> emit) async {
     emit(state.copyWith(isLoading: true, error: null));
     try {
-      // TODO: load from P2P service / local storage
-      await Future.delayed(const Duration(milliseconds: 300));
-      emit(state.copyWith(isLoading: false));
+      await _chatService.loadHistory();
+      final loaded = _chatService.messageHistory.map((m) => Message(
+        id: m.id,
+        content: m.content,
+        senderId: m.sender,
+        senderName: m.isMe ? 'Me' : m.sender,
+        timestamp: m.timestamp,
+        isAI: m.isAI,
+      )).toList();
+      emit(state.copyWith(isLoading: false, messages: loaded));
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: e.toString()));
     }

@@ -10,6 +10,7 @@ import '../services/localai_service.dart';
 import '../services/chat_service.dart';
 import '../services/loops_service.dart';
 import '../services/hybrid_ai_service.dart';
+import 'package:provider/provider.dart';
 import '../core/design_system/app_colors.dart';
 import '../widgets/message_bubble.dart';
 
@@ -35,10 +36,10 @@ class _ChatScreenState extends State<ChatScreen> {
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
   final LocalAIService _ai = LocalAIService();
-  final ChatService _chat = ChatService();
+  late final ChatService _chat;
   final Uuid _uuid = const Uuid();
   final ImagePicker _picker = ImagePicker();
-  final LoopsService _loops = LoopsService();
+  late final LoopsService _loops;
 
   bool _isAiReady = false;
   bool _isLoading = false;
@@ -50,6 +51,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _chat = context.read<ChatService>();
+    _loops = context.read<LoopsService>();
     _checkHealth();
     _ai.fetchModels();
     _chatSub = _chat.messages.listen((msg) {
@@ -64,8 +67,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _focusNode.dispose();
     _scrollController.dispose();
     _ai.dispose();
-    _chat.dispose();
-    _loops.dispose();
     super.dispose();
   }
 

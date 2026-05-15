@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/theme/app_theme.dart';
+import 'core/constants/app_constants.dart';
 import 'widgets/bottom_nav.dart';
 import 'services/wallet_service.dart';
 import 'services/commerce_service.dart';
@@ -12,8 +13,19 @@ import 'services/hybrid_ai_service.dart';
 import 'services/leaderboard_service.dart';
 import 'services/p2p_service.dart';
 import 'services/opencode_service.dart';
+import 'services/liberty_bridge.dart';
 import 'bloc/chat_bloc.dart';
 import 'screens/loops_player_screen.dart';
+import 'screens/chat_screen.dart';
+import 'screens/chat_list_screen.dart';
+import 'screens/contacts_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/splash_screen.dart';
+import 'screens/live_commerce_screen.dart';
+import 'screens/leaderboard_screen.dart';
+import 'screens/reward_screen.dart';
+import 'screens/loops_screen.dart';
+import 'screens/loops_list_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,15 +37,28 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => WalletService()),
         ChangeNotifierProvider(create: (_) => CommerceService()),
-        ChangeNotifierProvider(create: (_) => ChatService()),
+        ChangeNotifierProvider(create: (context) {
+          final cs = ChatService();
+          cs.loadHistory();
+          cs.attachP2P(context.read<P2PService>());
+          return cs;
+        }),
         ChangeNotifierProvider(create: (_) => LoopsService()),
         ChangeNotifierProvider(create: (_) => HybridAIService()),
         Provider(create: (_) => LeaderboardService()),
-        Provider(create: (_) => P2PService()),
+        ChangeNotifierProvider(create: (_) => P2PService()),
         Provider(create: (_) => OpenCodeService()),
+        ChangeNotifierProvider(create: (context) {
+          final bridge = LibertyBridge(
+            context.read<P2PService>(),
+            context.read<ChatService>(),
+          );
+          bridge.init(peerName: 'liberty_user');
+          return bridge;
+        }),
       ],
       child: BlocProvider(
-        create: (_) => ChatBloc(),
+        create: (context) => ChatBloc(context.read<ChatService>()),
         child: const MyApp(),
       ),
     ),
@@ -46,25 +71,67 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'DADA-AI',
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const MainBottomNav(),
+      initialRoute: '/',
       onGenerateRoute: (settings) {
-        if (settings.name == '/loops/player') {
-          final args = settings.arguments;
-          if (args is LoopVideo) {
+        final args = settings.arguments;
+
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(builder: (_) => const MainBottomNav());
+
+          case '/splash':
+            return MaterialPageRoute(builder: (_) => const SplashScreen());
+
+          case '/chat':
             return MaterialPageRoute(
-              builder: (_) => LoopsPlayerScreen(videoIndex: 0, video: args),
+              builder: (_) => const ChatScreen(peerId: 'default', peerName: 'Chat'),
             );
-          }
-          if (args is int) {
+
+          case '/chat-list':
+            return MaterialPageRoute(builder: (_) => const ChatListScreen());
+
+          case '/contacts':
+            return MaterialPageRoute(builder: (_) => const ContactsScreen());
+
+          case '/settings':
+            return MaterialPageRoute(builder: (_) => const SettingsScreen());
+
+          case '/leaderboard':
+            return MaterialPageRoute(builder: (_) => const LeaderboardScreen());
+
+          case '/live-commerce':
+            return MaterialPageRoute(builder: (_) => const LiveCommerceScreen());
+
+          case '/reward':
+            return MaterialPageRoute(builder: (_) => const RewardScreen());
+
+          case '/loops':
+            return MaterialPageRoute(builder: (_) => const LoopsScreen());
+
+          case '/loops/list':
+            return MaterialPageRoute(builder: (_) => const LoopsListScreen());
+
+          case '/loops/player':
+            if (args is LoopVideo) {
+              return MaterialPageRoute(
+                builder: (_) => LoopsPlayerScreen(videoIndex: 0, video: args),
+              );
+            }
+            if (args is int) {
+              return MaterialPageRoute(
+                builder: (_) => LoopsPlayerScreen(videoIndex: args),
+              );
+            }
             return MaterialPageRoute(
-              builder: (_) => LoopsPlayerScreen(videoIndex: args),
+              builder: (_) => LoopsPlayerScreen(videoIndex: 0),
             );
-          }
+
+          default:
+            return MaterialPageRoute(builder: (_) => const MainBottomNav());
         }
-        return null;
       },
     );
   }
