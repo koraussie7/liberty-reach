@@ -11,22 +11,18 @@ privseai.com {
     root * /var/www/privseai/build/web
     file_server
 
-    # API 서버 (Rust/Node.js)
     handle /api/* {
         reverse_proxy localhost:8080
     }
 
-    # Streamlit 업로더
     handle /upload* {
         reverse_proxy localhost:8501
     }
 
-    # yt-dlp importer
     handle /importer* {
         reverse_proxy localhost:8502
     }
 
-    # AI 서버 (FastAPI)
     handle /health {
         reverse_proxy localhost:8000
     }
@@ -67,7 +63,7 @@ privseai.com {
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data: https:; connect-src 'self' ws: wss: https: http:; media-src 'self' https: blob:; worker-src 'self' blob:;"
     }
 
     encode gzip zstd
