@@ -73,6 +73,41 @@ class P2PService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Propagate content to nearby peers via P2P network
+  Future<bool> propagateToNearby({
+    required String contentId,
+    required String contentType,
+    required dynamic location,
+    double radiusKm = 10.0,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final message = P2PMessage(
+        type: 'propagate',
+        sender: _localPeerId ?? 'local',
+        content: jsonEncode({
+          'content_id': contentId,
+          'content_type': contentType,
+          'location': {
+            'lat': location?.latitude ?? 0.0,
+            'lng': location?.longitude ?? 0.0,
+          },
+          'radius_km': radiusKm,
+          'metadata': metadata ?? {},
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+        timestamp: DateTime.now().toIso8601String(),
+      );
+
+      _incoming.add(message);
+      debugPrint('[P2P] Propagate: $contentType / $contentId (radius: ${radiusKm}km)');
+      return true;
+    } catch (e) {
+      debugPrint('[P2P] Propagate error: $e');
+      return false;
+    }
+  }
+
   @override
   void dispose() {
     _incoming.close();

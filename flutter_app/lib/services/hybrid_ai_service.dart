@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 
 class HybridAIService extends ChangeNotifier {
   final String _baseUrl = 'https://muhantube.com';
@@ -41,6 +43,62 @@ class HybridAIService extends ChangeNotifier {
     } catch (e) {
       debugPrint('[HybridAI] Error: $e');
       return '(error: $e)';
+    }
+  }
+
+  /// Analyze a product photo with location context for Market listing
+  Future<Map<String, dynamic>> analyzeProductWithLocation(
+    File image,
+    Position position,
+  ) async {
+    try {
+      final locationContext =
+        'Location: lat=${position.latitude}, lng=${position.longitude}';
+
+      final prompt = '''
+You are a DADA-AI Market Assistant. Analyze this product photo and return a JSON with:
+- title (short product name, Korean)
+- description (1-2 sentence description in Korean)
+- price (estimated reasonable price in DADA Point, integer)
+- category (one of: electronics/fashion/food/art/other)
+- hashtags (3-5 relevant tags with # prefix, Korean)
+
+Location context: $locationContext
+Return ONLY valid JSON.
+''';
+
+      final result = await process(prompt, model: 'gemini-2.5-flash');
+
+      // Try to parse JSON from AI response
+      final jsonStr = result.contains('{')
+          ? result.substring(result.indexOf('{'), result.lastIndexOf('}') + 1)
+          : '{}';
+
+      final parsed = jsonDecode(jsonStr) as Map<String, dynamic>;
+      return {
+        'title': parsed['title'] ?? '제품',
+        'description': parsed['description'] ?? 'AI 분석 완료',
+        'price': parsed['price'] ?? 100,
+        'category': parsed['category'] ?? 'other',
+        'hashtags': parsed['hashtags'] ?? '#DADA #Market',
+        'location': {
+          'lat': position.latitude,
+          'lng': position.longitude,
+        },
+      };
+    } catch (e) {
+      debugPrint('[HybridAI] analyzeProduct error: $e');
+      return {
+        'title': '새 제품',
+        'description': '위치 기반 AI 분석 실패',
+        'price': 100,
+        'category': 'other',
+        'hashtags': '#DADA #AI',
+        'location': {
+          'lat': position.latitude,
+          'lng': position.longitude,
+        },
+      };
     }
   }
 
