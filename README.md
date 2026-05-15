@@ -12,10 +12,44 @@
 
 <br>
 
-<!-- Language Toggle Buttons -->
-<a href="#en">🇺🇸 <b>English</b></a> &nbsp;·&nbsp; <a href="#ko">🇰🇷 <b>한국어</b></a>
+<!-- 🌍 Language Selector - Google Translate -->
+<div align="center">
+
+## 🌍 Language / 언어
+
+Click any flag to translate this page via Google Translate  
+원하는 언어를 클릭하면 Google 번역으로 읽을 수 있습니다
+
+<br>
+
+<!-- Row 1 -->
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=ko&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇰🇷_한국어-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Korean"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=my&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇲🇲_မြန်မာ-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Burmese"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=vi&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇻🇳_Tiếng_Việt-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Vietnamese"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=es&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇪🇸_Español-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Spanish"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=ja&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇯🇵_日本語-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Japanese"></a>
+
+<!-- Row 2 -->
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=zh-CN&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇨🇳_中文-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Chinese"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=fr&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇫🇷_Français-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="French"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=de&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇩🇪_Deutsch-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="German"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=th&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇹🇭_ไทย-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Thai"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=lo&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇱🇦_ລາວ-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Lao"></a>
+
+<!-- Row 3 -->
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=km&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇰🇭_ភាសាខ្មែរ-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Khmer"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=es-MX&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇲🇽_Español_MX-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Mexican Spanish"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=en&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇺🇸_English-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="English"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=id&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇮🇩_Bahasa_Indonesia-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Indonesian"></a>&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=ms&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI"><img src="https://img.shields.io/badge/🇲🇾_Bahasa_Melayu-555555?style=for-the-badge&logo=googletranslate&logoColor=white&labelColor=4285F4" alt="Malay"></a>
+
+<br><br>
+
+<a href="https://translate.google.com/translate?hl=en&sl=auto&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🔗 <b>Google Translate</b> — 100+ languages / 100개 이상 언어</a>
 
 </div>
+
+<br>
 
 ---
 
@@ -264,6 +298,22 @@ Pull Request는 언제나 환영합니다! 함께 기여하거나 우리의 AI �
 
 <br>
 
-<a href="#en">🇺🇸 English</a> &nbsp;·&nbsp; <a href="#ko">🇰🇷 한국어</a> &nbsp;·&nbsp; <a href="#">⬆️ Back to Top</a>
+<!-- 🌍 Language Selector Bottom -->
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=ko&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇰🇷 한국어</a> &nbsp;·&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=my&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇲🇲 မြန်မာ</a> &nbsp;·&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=vi&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇻🇳 Tiếng Việt</a> &nbsp;·&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=es&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇪🇸 Español</a> &nbsp;·&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=ja&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇯🇵 日本語</a> &nbsp;·&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=zh-CN&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇨🇳 中文</a> &nbsp;·&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=fr&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇫🇷 Français</a> &nbsp;·&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=de&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇩🇪 Deutsch</a> &nbsp;·&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=th&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇹🇭 ไทย</a> &nbsp;·&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=lo&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇱🇦 ລາວ</a> &nbsp;·&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=km&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇰🇭 ភាសាខ្មែរ</a> &nbsp;·&nbsp;
+<a href="https://translate.google.com/translate?hl=en&sl=auto&tl=es-MX&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">🇲🇽 Español MX</a>
+
+<br><br>
+
+<sub>🌍 <a href="https://translate.google.com/translate?hl=en&sl=auto&u=https%3A%2F%2Fgithub.com%2Fkoraussie7%2FDADA-AI">Google Translate</a> (100+ languages)</sub> &nbsp;·&nbsp; <a href="#">⬆️ Back to Top</a>
 
 </div>
