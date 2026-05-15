@@ -10,12 +10,14 @@ class P2PMessage {
   final String sender;
   final String content;
   final String timestamp;
+  final String? room;
 
   P2PMessage({
     required this.type,
     required this.sender,
     required this.content,
     required this.timestamp,
+    this.room,
   });
 
   factory P2PMessage.fromJson(Map<String, dynamic> json) => P2PMessage(
@@ -23,6 +25,7 @@ class P2PMessage {
     sender: json['sender'] as String? ?? 'unknown',
     content: json['content'] as String? ?? '',
     timestamp: json['timestamp'] as String? ?? '',
+    room: json['room'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -30,6 +33,7 @@ class P2PMessage {
     'sender': sender,
     'content': content,
     'timestamp': timestamp,
+    if (room != null) 'room': room,
   };
 }
 
@@ -165,7 +169,7 @@ class P2PService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void sendMessage(String peerId, String content) {
+  void sendMessage(String peerId, String content, {String? room}) {
     if (_channel == null || !_isConnected) return;
     try {
       _channel!.sink.add(jsonEncode({
@@ -174,13 +178,14 @@ class P2PService extends ChangeNotifier {
         'sender': _localPeerId,
         'content': content,
         'timestamp': DateTime.now().toIso8601String(),
+        if (room != null) 'room': room,
       }));
     } catch (e) {
       debugPrint('[P2P] send error: $e');
     }
   }
 
-  void broadcast(String content) {
+  void broadcast(String content, {String? room}) {
     if (_channel == null || !_isConnected) return;
     try {
       _channel!.sink.add(jsonEncode({
@@ -189,6 +194,7 @@ class P2PService extends ChangeNotifier {
         'sender': _localPeerId,
         'content': content,
         'timestamp': DateTime.now().toIso8601String(),
+        if (room != null) 'room': room,
       }));
     } catch (e) {
       debugPrint('[P2P] broadcast error: $e');

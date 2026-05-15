@@ -91,6 +91,14 @@ class _LiveCommerceScreenState extends State<LiveCommerceScreen> {
                             child: Text('$_viewerCount watching',
                                 style: const TextStyle(color: Colors.white70, fontSize: 11)),
                           ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Badge(
+                              label: Text('${commerce.cartCount}', style: TextStyle(fontSize: 9, color: Colors.white)),
+                              child: const Icon(Icons.shopping_cart, color: Colors.white, size: 20),
+                            ),
+                            onPressed: () => Navigator.pushNamed(context, '/commerce/cart'),
+                          ),
                         ],
                       ),
                     ],
@@ -207,6 +215,17 @@ class _LiveCommerceScreenState extends State<LiveCommerceScreen> {
                         label: const Text("Chat with Hermes"),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.pushNamed(context, '/commerce/catalog'),
+                    icon: const Icon(Icons.store, color: Colors.white70),
+                    label: const Text('Full Catalog', style: TextStyle(color: Colors.white70)),
+                  ),
+                ),
                   ],
                 ),
               ),

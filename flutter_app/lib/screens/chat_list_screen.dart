@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/group_chat_service.dart';
 import 'chat_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -11,50 +13,41 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen> {
   final List<ChatRoom> _rooms = [
     ChatRoom(
-      name: 'AI 어시스턴트',
-      lastMsg: '@gemma 로 질문해보세요',
-      time: '방금',
+      name: 'AI Assistant',
+      lastMsg: 'Ask with @gemma',
+      time: 'now',
       unread: 0,
       isAI: true,
       peerId: 'ai-assistant',
     ),
-    ChatRoom(
-      name: '앨리스',
-      lastMsg: '네, 확인해볼게요!',
-      time: '3분 전',
-      unread: 2,
-      isAI: false,
-      peerId: 'alice',
-    ),
-    ChatRoom(
-      name: '밥',
-      lastMsg: 'Liberty Reach P2P로 연결됨',
-      time: '10분 전',
-      unread: 0,
-      isAI: false,
-      peerId: 'bob',
-    ),
-    ChatRoom(
-      name: 'Node 1',
-      lastMsg: '/id 로 내 Peer ID 확인',
-      time: '1시간 전',
-      unread: 0,
-      isAI: false,
-      peerId: 'node-1',
-    ),
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<GroupChatService>().loadGroups();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final groups = context.watch<GroupChatService>().groups;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Liberty Reach'),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
+            icon: const Icon(Icons.group_add),
+            tooltip: 'Create group',
+            onPressed: () => Navigator.pushNamed(context, '/group/create'),
+          ),
+          IconButton(
             icon: const Icon(Icons.auto_awesome),
             onPressed: () => _openChat(context, ChatRoom(
-              name: 'AI 어시스턴트',
+              name: 'AI Assistant',
               lastMsg: '',
               time: '',
               unread: 0,
@@ -64,18 +57,35 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
         ],
       ),
-      body: _rooms.isEmpty
+      body: _rooms.isEmpty && groups.isEmpty
           ? _buildEmptyState()
-          : ListView.separated(
+          : ListView(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              itemCount: _rooms.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, indent: 80),
-              itemBuilder: (context, index) {
-                return _ChatRoomTile(
-                  room: _rooms[index],
-                  onTap: () => _openChat(context, _rooms[index]),
-                );
-              },
+              children: [
+                if (groups.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: Text('GROUPS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[500])),
+                  ),
+                  ...groups.map((group) => _ChatRoomTile(
+                    room: ChatRoom(
+                      name: group.name,
+                      lastMsg: '${group.members.length} members',
+                      time: '',
+                      unread: 0,
+                      isAI: false,
+                      peerId: group.id,
+                      isGroup: true,
+                    ),
+                    onTap: () => _openGroupChat(context, group.id, group.name),
+                  )),
+                  const Divider(indent: 80),
+                ],
+                ..._rooms.map((room) => _ChatRoomTile(
+                  room: room,
+                  onTap: () => _openChat(context, room),
+                )),
+              ],
             ),
     );
   }
@@ -87,9 +97,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
         children: [
           Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[300]),
           const SizedBox(height: 16),
-          Text(
-            '연결된 대화가 없습니다',
-            style: TextStyle(fontSize: 16, color: Colors.grey[500]),
+          Text('No conversations', style: TextStyle(fontSize: 16, color: Colors.grey[500])),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => Navigator.pushNamed(context, '/group/create'),
+            child: const Text('Create a group'),
           ),
         ],
       ),
@@ -108,6 +120,20 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
     );
   }
+
+  void _openGroupChat(BuildContext context, String groupId, String groupName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          peerId: groupId,
+          peerName: groupName,
+          isGroup: true,
+          roomId: groupId,
+        ),
+      ),
+    );
+  }
 }
 
 class ChatRoom {
@@ -117,6 +143,7 @@ class ChatRoom {
   final int unread;
   final bool isAI;
   final String peerId;
+  final bool isGroup;
 
   ChatRoom({
     required this.name,
@@ -125,6 +152,7 @@ class ChatRoom {
     required this.unread,
     required this.isAI,
     required this.peerId,
+    this.isGroup = false,
   });
 }
 
@@ -141,11 +169,13 @@ class _ChatRoomTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: CircleAvatar(
         radius: 24,
-        backgroundColor: room.isAI
-            ? const Color(0xFFFEE500)
-            : Colors.grey[300],
+        backgroundColor: room.isGroup
+            ? const Color(0xFF7B1FA2)
+            : room.isAI
+                ? const Color(0xFFFEE500)
+                : Colors.grey[300],
         child: Icon(
-          room.isAI ? Icons.auto_awesome : Icons.person,
+          room.isGroup ? Icons.group : room.isAI ? Icons.auto_awesome : Icons.person,
           color: Colors.black54,
           size: 24,
         ),

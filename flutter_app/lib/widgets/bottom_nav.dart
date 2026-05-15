@@ -5,6 +5,7 @@ import '../screens/home_screen.dart';
 import '../screens/loops_screen.dart';
 import '../screens/contacts_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/chat_list_screen.dart';
 
 class MainBottomNav extends StatefulWidget {
   const MainBottomNav({super.key});
@@ -18,9 +19,9 @@ class _MainBottomNavState extends State<MainBottomNav> {
 
   final List<Widget> _screens = [
     const HomeScreen(),
+    const ChatListScreen(),
     const LoopsScreen(),
-    const ContactsScreen(),
-    const RewardScreen(),
+    const LiveCommerceScreen(),
     const SettingsScreen(),
   ];
 
@@ -41,11 +42,11 @@ class _MainBottomNavState extends State<MainBottomNav> {
           unselectedItemColor: Colors.grey,
           type: BottomNavigationBarType.fixed,
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: '홈'),
+            BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: 'Chat'),
             BottomNavigationBarItem(icon: Icon(Icons.play_circle_filled), label: 'Loops'),
-            BottomNavigationBarItem(icon: Icon(Icons.people_alt), label: '연락처'),
-            BottomNavigationBarItem(icon: Icon(Icons.card_giftcard), label: 'Reward'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: '설정'),
+            BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: 'Commerce'),
+            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
           ],
         ),
       ),

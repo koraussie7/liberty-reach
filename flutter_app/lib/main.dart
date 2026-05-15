@@ -14,6 +14,11 @@ import 'services/leaderboard_service.dart';
 import 'services/p2p_service.dart';
 import 'services/opencode_service.dart';
 import 'services/liberty_bridge.dart';
+import 'services/group_chat_service.dart';
+import 'services/voice_service.dart';
+import 'services/speech_service.dart';
+import 'services/p2p_inference_service.dart';
+import 'services/video_call_service.dart';
 import 'bloc/chat_bloc.dart';
 import 'screens/loops_player_screen.dart';
 import 'screens/chat_screen.dart';
@@ -26,6 +31,11 @@ import 'screens/leaderboard_screen.dart';
 import 'screens/reward_screen.dart';
 import 'screens/loops_screen.dart';
 import 'screens/loops_list_screen.dart';
+import 'screens/create_group_screen.dart';
+import 'screens/group_info_screen.dart';
+import 'screens/commerce_catalog_screen.dart';
+import 'screens/commerce_cart_screen.dart';
+import 'screens/video_call_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,6 +58,11 @@ void main() {
         Provider(create: (_) => LeaderboardService()),
         ChangeNotifierProvider(create: (_) => P2PService()),
         Provider(create: (_) => OpenCodeService()),
+        ChangeNotifierProvider(create: (_) => GroupChatService()),
+        ChangeNotifierProvider(create: (_) => VoiceService()),
+        ChangeNotifierProvider(create: (_) => SpeechService()),
+        ChangeNotifierProvider(create: (context) => P2PInferenceService(context.read<P2PService>())),
+        ChangeNotifierProvider(create: (context) => VideoCallService(context.read<P2PService>())),
         ChangeNotifierProvider(create: (context) {
           final bridge = LibertyBridge(
             context.read<P2PService>(),
@@ -128,6 +143,26 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (_) => LoopsPlayerScreen(videoIndex: 0),
             );
+
+          case '/group/create':
+            return MaterialPageRoute(builder: (_) => const CreateGroupScreen());
+
+          case '/group/info':
+            if (args is String) {
+              return MaterialPageRoute(
+                builder: (_) => GroupInfoScreen(groupId: args),
+              );
+            }
+            return MaterialPageRoute(builder: (_) => const MainBottomNav());
+
+          case '/commerce/catalog':
+            return MaterialPageRoute(builder: (_) => const CommerceCatalogScreen());
+
+          case '/commerce/cart':
+            return MaterialPageRoute(builder: (_) => const CommerceCartScreen());
+
+          case '/video-call':
+            return MaterialPageRoute(builder: (_) => const VideoCallScreen());
 
           default:
             return MaterialPageRoute(builder: (_) => const MainBottomNav());

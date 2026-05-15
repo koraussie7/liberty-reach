@@ -10,6 +10,10 @@ import '../services/localai_service.dart';
 import '../services/chat_service.dart';
 import '../services/loops_service.dart';
 import '../services/hybrid_ai_service.dart';
+import '../services/voice_service.dart';
+import '../services/speech_service.dart';
+import '../services/group_chat_service.dart';
+import '../services/video_call_service.dart';
 import 'package:provider/provider.dart';
 import '../core/design_system/app_colors.dart';
 import '../widgets/message_bubble.dart';
@@ -18,12 +22,16 @@ class ChatScreen extends StatefulWidget {
   final String peerId;
   final String peerName;
   final bool isAI;
+  final String? roomId;
+  final bool isGroup;
 
   const ChatScreen({
     super.key,
     required this.peerId,
     required this.peerName,
     this.isAI = false,
+    this.roomId,
+    this.isGroup = false,
   });
 
   @override
@@ -48,6 +56,9 @@ class _ChatScreenState extends State<ChatScreen> {
   StreamSubscription? _chatSub;
   String _mode = 'auto';
 
+  bool _isRecording = false;
+  StreamSubscription? _voiceSub;
+
   @override
   void initState() {
     super.initState();
@@ -55,14 +66,33 @@ class _ChatScreenState extends State<ChatScreen> {
     _loops = context.read<LoopsService>();
     _checkHealth();
     _ai.fetchModels();
-    _chatSub = _chat.messages.listen((msg) {
-      if (mounted) _addMessage(msg);
-    });
+
+    if (widget.roomId != null) {
+      final groupService = context.read<GroupChatService>();
+      _voiceSub = groupService.messageStream(widget.roomId!).listen((msgJson) {
+        try {
+          final data = jsonDecode(msgJson) as Map<String, dynamic>;
+          final chatMsg = ChatMessage(
+            id: _uuid.v4(),
+            sender: data['sender'] as String? ?? 'unknown',
+            content: data['content'] as String? ?? '',
+            isMe: false,
+            timestamp: DateTime.tryParse(data['timestamp'] as String? ?? '') ?? DateTime.now(),
+          );
+          if (mounted) _addMessage(chatMsg);
+        } catch (_) {}
+      });
+    } else {
+      _chatSub = _chat.messages.listen((msg) {
+        if (mounted) _addMessage(msg);
+      });
+    }
   }
 
   @override
   void dispose() {
     _chatSub?.cancel();
+    _voiceSub?.cancel();
     _textController.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
@@ -103,9 +133,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (image != null) {
       final bytes = await image.readAsBytes();
       final b64 = base64Encode(bytes);
-      if (mounted) {
-        setState(() => _pendingImages.add(b64));
-      }
+      if (mounted) setState(() => _pendingImages.add(b64));
     }
   }
 
@@ -118,9 +146,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (image != null) {
       final bytes = await image.readAsBytes();
       final b64 = base64Encode(bytes);
-      if (mounted) {
-        setState(() => _pendingImages.add(b64));
-      }
+      if (mounted) setState(() => _pendingImages.add(b64));
     }
   }
 
@@ -148,11 +174,11 @@ class _ChatScreenState extends State<ChatScreen> {
         final reward = result['reward_points'] as int? ?? 0;
         final fullUrl = 'https://muhantube.com$videoUrl';
         _addMessage(ChatMessage(
-          id: _uuid.v4(), sender: 'me', content: '🎬 $fullUrl', isMe: true,
+          id: _uuid.v4(), sender: 'me', content: '\u{1F3AC} $fullUrl', isMe: true,
         ));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ Video uploaded! (+$reward DADA Point)'),
+            content: Text('\u2705 Video uploaded! (+$reward DADA Point)'),
             backgroundColor: Colors.deepPurple,
           ),
         );
@@ -169,6 +195,57 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } finally {
       if (mounted) setState(() => _isUploadingVideo = false);
+    }
+  }
+
+  Future<void> _startVoiceRecording() async {
+    final voiceService = context.read<VoiceService>();
+    await voiceService.startRecording();
+    setState(() => _isRecording = true);
+  }
+
+  Future<void> _stopVoiceRecording() async {
+    final voiceService = context.read<VoiceService>();
+    final path = await voiceService.stopRecording();
+    setState(() => _isRecording = false);
+    if (path != null) {
+      final bytes = await voiceService.getRecordingBytes();
+      if (bytes != null) {
+        final b64 = voiceService.encodeToBase64(bytes);
+        if (widget.roomId != null) {
+          context.read<P2PService>().broadcast(jsonEncode({
+            'type': 'voice', 'sender': 'me', 'data': b64, 'room': widget.roomId,
+          }), room: widget.roomId);
+        } else {
+          _chat.send('[Voice message]', widget.peerId);
+        }
+        _addMessage(ChatMessage(
+          id: _uuid.v4(), sender: 'me', content: '\u{1F3A4} Voice message', isMe: true,
+        ));
+      }
+    }
+  }
+
+  Future<void> _startSpeechToText() async {
+    final speechService = context.read<SpeechService>();
+    await speechService.startListening();
+    setState(() {});
+  }
+
+  Future<void> _stopSpeechToText() async {
+    final speechService = context.read<SpeechService>();
+    final text = await speechService.stopListening();
+    if (text.isNotEmpty) {
+      _textController.text = text;
+    }
+    setState(() {});
+  }
+
+  Future<void> _startVideoCall() async {
+    final callService = context.read<VideoCallService>();
+    await callService.startCall(widget.peerId, widget.peerName);
+    if (mounted) {
+      Navigator.pushNamed(context, '/video-call');
     }
   }
 
@@ -190,8 +267,15 @@ class _ChatScreenState extends State<ChatScreen> {
     final imagesToSend = List<String>.from(_pendingImages);
     setState(() => _pendingImages = []);
 
-    // Determine mode: manual override or auto-detect
     final effectiveMode = _mode == 'auto' ? _detectIntent(text) : _mode;
+
+    if (widget.isGroup && widget.roomId != null) {
+      context.read<P2PService>().broadcast(jsonEncode({
+        'type': 'group_chat', 'sender': 'me', 'content': text,
+        'room': widget.roomId, 'timestamp': DateTime.now().toIso8601String(),
+      }), room: widget.roomId);
+      return;
+    }
 
     if (widget.isAI || text.startsWith('@gemma ') || text.startsWith('@ai ') || text.startsWith('@gemini ') || hadImages) {
       final prompt = text.replaceFirst(RegExp(r'^@(gemma|ai|gemini)\s'), '');
@@ -213,9 +297,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String _detectIntent(String text) {
     final lower = text.toLowerCase();
-    if (['debug', 'bug', 'error', '에러', 'fix', 'crash', 'fail'].any((w) => lower.contains(w))) return 'debug';
-    if (['architecture', '설계', '구조', '아키텍처', 'system design'].any((w) => lower.contains(w))) return 'architect';
-    if (['code', 'function', 'implement', 'refactor', '컴파일', '코드', '함수'].any((w) => lower.contains(w))) return 'code';
+    if (['debug', 'bug', 'error', '\uc5d0\ub7ec', 'fix', 'crash', 'fail'].any((w) => lower.contains(w))) return 'debug';
+    if (['architecture', '\uc124\uacc4', '\uad6c\uc870', '\uc544\ud0a4\ud14d\ucc98', 'system design'].any((w) => lower.contains(w))) return 'architect';
+    if (['code', 'function', 'implement', 'refactor', '\ucef4\ud30c\uc77c', '\ucf54\ub4dc', '\ud568\uc218'].any((w) => lower.contains(w))) return 'code';
     return 'normal';
   }
 
@@ -270,6 +354,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final speechService = context.watch<SpeechService>();
+    final callService = context.watch<VideoCallService>();
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black87), onPressed: () => Navigator.pop(context)),
@@ -277,27 +364,52 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: widget.isAI ? const Color(0xFFFEE500) : Colors.grey[300],
-              child: Icon(widget.isAI ? Icons.auto_awesome : Icons.person, color: Colors.black54, size: 20),
+              backgroundColor: widget.isGroup
+                  ? const Color(0xFF7B1FA2)
+                  : widget.isAI ? const Color(0xFFFEE500) : Colors.grey[300],
+              child: Icon(
+                widget.isGroup ? Icons.group : widget.isAI ? Icons.auto_awesome : Icons.person,
+                color: Colors.black54, size: 20,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.peerName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  GestureDetector(
+                    onTap: widget.isGroup && widget.roomId != null
+                        ? () => Navigator.pushNamed(context, '/group/info', arguments: widget.roomId)
+                        : null,
+                    child: Text(widget.peerName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  ),
                   Row(
                     children: [
                       Container(width: 6, height: 6, decoration: BoxDecoration(
                         color: _isAiReady ? const Color(0xFF4CAF50) : Colors.grey[400], shape: BoxShape.circle,
                       )),
                       const SizedBox(width: 4),
-                      Text(_isAiReady ? '$_modelName Ready' : 'Offline', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      Text(
+                        widget.isGroup ? 'Group' : widget.isAI ? '$_modelName Ready' : 'Online',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
+            if (!widget.isAI && !widget.isGroup)
+              IconButton(
+                icon: const Icon(Icons.videocam, size: 20, color: Colors.black54),
+                tooltip: 'Video call',
+                onPressed: _startVideoCall,
+              ),
+            if (widget.isGroup && widget.roomId != null)
+              IconButton(
+                icon: const Icon(Icons.info_outline, size: 20, color: Colors.black54),
+                tooltip: 'Group info',
+                onPressed: () => Navigator.pushNamed(context, '/group/info', arguments: widget.roomId),
+              ),
             if (widget.isAI)
               PopupMenuButton<String>(
                 icon: const Icon(Icons.model_training, size: 20, color: Colors.black54),
@@ -348,6 +460,51 @@ class _ChatScreenState extends State<ChatScreen> {
                   const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
                   const SizedBox(width: 8),
                   Text('AI server offline', style: TextStyle(fontSize: 12, color: Colors.orange[800])),
+                ],
+              ),
+            ),
+          if (speechService.isListening)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: const Color(0xFFFEE500).withOpacity(0.2),
+              child: Row(
+                children: [
+                  const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  const SizedBox(width: 8),
+                  Text(speechService.recognizedText.isNotEmpty
+                      ? speechService.recognizedText
+                      : 'Listening...'),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: _stopSpeechToText,
+                    child: const Icon(Icons.stop, color: Colors.red),
+                  ),
+                ],
+              ),
+            ),
+          if (callService.state == CallState.ringing)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: Colors.green[50],
+              child: Row(
+                children: [
+                  const Icon(Icons.phone, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Text('Incoming call from ${callService.remotePeerName ?? "unknown"}'),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.call, color: Colors.green),
+                    onPressed: () {
+                      callService.acceptCall();
+                      Navigator.pushNamed(context, '/video-call');
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.call_end, color: Colors.red),
+                    onPressed: () => callService.rejectCall(),
+                  ),
                 ],
               ),
             ),
@@ -458,6 +615,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInput() {
+    final speechService = context.watch<SpeechService>();
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -486,6 +645,20 @@ class _ChatScreenState extends State<ChatScreen> {
             tooltip: 'Upload video to Loops',
             onPressed: _isUploadingVideo ? null : _pickAndUploadVideoToLoops,
           ),
+          IconButton(
+            icon: _isRecording
+                ? const Icon(Icons.stop, color: Colors.red)
+                : const Icon(Icons.mic, color: Colors.grey),
+            tooltip: _isRecording ? 'Stop recording' : 'Voice message',
+            onPressed: _isRecording ? _stopVoiceRecording : _startVoiceRecording,
+          ),
+          IconButton(
+            icon: speechService.isListening
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.keyboard_voice, color: Colors.grey),
+            tooltip: speechService.isListening ? 'Stop' : 'Speech to text',
+            onPressed: speechService.isListening ? _stopSpeechToText : _startSpeechToText,
+          ),
           const SizedBox(width: 4),
           Expanded(
             child: Container(
@@ -497,7 +670,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _sendMessage(),
                 decoration: InputDecoration(
-                  hintText: widget.isAI ? 'Ask $_modelName...' : 'Message...',
+                  hintText: widget.isAI ? 'Ask $_modelName...' : widget.isGroup ? 'Message group...' : 'Message...',
                   hintStyle: const TextStyle(color: Colors.grey),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

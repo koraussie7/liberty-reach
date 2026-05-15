@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../models/chat_message.dart';
 import 'p2p_service.dart';
 import 'chat_service.dart';
+import 'p2p_inference_service.dart';
 
 class LibertyBridge extends ChangeNotifier {
   final P2PService _p2p;
@@ -68,12 +69,18 @@ class LibertyBridge extends ChangeNotifier {
 
   Future<String> askAI(String prompt) async {
     debugPrint('[LibertyBridge] AI ask: $prompt');
-    return '(AI response for: $prompt)';
+    final inference = P2PInferenceService(_p2p);
+    final taskId = await inference.submitTask(InferenceTaskType.textCompletion, prompt);
+    await Future.delayed(const Duration(seconds: 3));
+    return inference.getResult(taskId) ?? '(AI response pending)';
   }
 
   Future<String> askMultimodal(String prompt, List<String> imagesBase64) async {
     debugPrint('[LibertyBridge] Multimodal ask: $prompt (${imagesBase64.length} images)');
-    return '(AI multimodal response for: $prompt)';
+    final inference = P2PInferenceService(_p2p);
+    final taskId = await inference.submitTask(InferenceTaskType.imageAnalysis, prompt, images: imagesBase64);
+    await Future.delayed(const Duration(seconds: 5));
+    return inference.getResult(taskId) ?? '(Vision response pending)';
   }
 
   Future<String> connectToPeer(String address) async {

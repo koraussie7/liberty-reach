@@ -51,6 +51,13 @@ class CommerceRecommendation {
       );
 }
 
+class CartItem {
+  final Product product;
+  int quantity;
+
+  CartItem({required this.product, this.quantity = 1});
+}
+
 class CommerceService extends ChangeNotifier {
   final String _baseUrl = 'https://muhantube.com';
   final http.Client _client;
@@ -62,11 +69,46 @@ class CommerceService extends ChangeNotifier {
   CommerceRecommendation? _currentRecommendation;
   List<Product> _trendingCache = [];
   bool _trendingLoaded = false;
+  final List<CartItem> _cart = [];
 
   bool get isLive => _isLive;
   int get viewerCount => _viewerCount;
   CommerceRecommendation? get currentRecommendation => _currentRecommendation;
   List<Product> get trendingProductsCache => _trendingCache;
+  List<CartItem> get cart => List.unmodifiable(_cart);
+  int get cartCount => _cart.fold<int>(0, (sum, item) => sum + item.quantity);
+
+  void addToCart(Product product) {
+    final idx = _cart.indexWhere((item) => item.product.id == product.id);
+    if (idx >= 0) {
+      _cart[idx].quantity++;
+    } else {
+      _cart.add(CartItem(product: product));
+    }
+    notifyListeners();
+  }
+
+  void removeFromCart(String productId) {
+    _cart.removeWhere((item) => item.product.id == productId);
+    notifyListeners();
+  }
+
+  void updateQuantity(String productId, int quantity) {
+    final idx = _cart.indexWhere((item) => item.product.id == productId);
+    if (idx >= 0) {
+      if (quantity <= 0) {
+        _cart.removeAt(idx);
+      } else {
+        _cart[idx].quantity = quantity;
+      }
+      notifyListeners();
+    }
+  }
+
+  void checkout() {
+    _cart.clear();
+    notifyListeners();
+  }
 
   Future<void> startLiveCommerce(String videoId, List<Product> products) async {
     _isLive = true;
