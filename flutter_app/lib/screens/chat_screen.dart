@@ -313,8 +313,8 @@ class _ChatScreenState extends State<ChatScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFFFF8E1), // 상단: 따뜻한 크림색
-              Color(0xFFF5F5F5), // 하단: 라이트 그레이
+              Color(0xFFF8F9FA),
+              Color(0xFFF0F0F0),
             ],
           ),
         ),
