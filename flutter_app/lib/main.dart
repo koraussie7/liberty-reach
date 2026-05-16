@@ -71,6 +71,7 @@ void main() {
           bridge.init(peerName: 'liberty_user');
           return bridge;
         }),
+        ChangeNotifierProvider(create: (_) => ValueNotifier<ThemeMode>(ThemeMode.dark)),
       ],
       child: BlocProvider(
         create: (context) => ChatBloc(context.read<ChatService>()),
@@ -85,10 +86,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = context.watch<ValueNotifier<ThemeMode>>().value;
+
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       initialRoute: '/',
       onGenerateRoute: (settings) {
         final args = settings.arguments;

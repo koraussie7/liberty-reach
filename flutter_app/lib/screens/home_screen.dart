@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
+import '../core/constants/app_constants.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -7,9 +8,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkTheme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
         title: const Text("DADA-AI", style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [IconButton(icon: const Icon(Icons.search), onPressed: () {})],
       ),
@@ -41,8 +40,8 @@ class HomeScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("\u{1F525} 지금 가장 핫한 Loop", style: TextStyle(color: Colors.white, fontSize: 18)),
-                    Text("커플 챌린지 #dance", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                    Text(AppConstants.trendingLabel, style: const TextStyle(color: Colors.white, fontSize: 18)),
+                    Text(AppConstants.trendingHashtag, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -83,7 +82,7 @@ class HomeScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("#커플챌린지", style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text(AppConstants.trendingHashtag, style: const TextStyle(fontWeight: FontWeight.bold)),
                               Text("dancewithme", style: TextStyle(color: Colors.grey, fontSize: 13)),
                             ],
                           ),

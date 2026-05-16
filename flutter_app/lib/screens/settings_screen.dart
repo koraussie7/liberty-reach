@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/p2p_service.dart';
 import '../services/liberty_bridge.dart';
 import '../core/constants/app_constants.dart';
+import '../core/design_system/app_colors.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -20,6 +21,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final p2p = context.watch<P2PService>();
     final bridge = context.watch<LibertyBridge>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeMode = context.watch<ThemeMode>();
 
     return Scaffold(
       appBar: AppBar(
@@ -31,7 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Profile section
           Container(
             padding: const EdgeInsets.all(20),
-            color: Colors.white,
+            color: isDark ? AppColors.surfaceLight : Colors.white,
             child: Row(
               children: [
                 CircleAvatar(
@@ -50,11 +53,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Peer ID: ${bridge.peerId ?? p2p.localPeerId ?? '12D3KooW...abcd'}',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                      style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : Colors.grey[500]),
                     ),
                   ],
                 ),
               ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Appearance
+          _sectionHeader('Appearance'),
+          _settingTile(
+            icon: isDark ? Icons.dark_mode : Icons.light_mode,
+            title: 'Theme',
+            subtitle: isDark ? 'Dark Mode' : 'Light Mode',
+            trailing: Switch(
+              value: isDark,
+              onChanged: (v) {
+                if (v) {
+                  context.read<ValueNotifier<ThemeMode>>().value = ThemeMode.dark;
+                } else {
+                  context.read<ValueNotifier<ThemeMode>>().value = ThemeMode.light;
+                }
+              },
+              activeColor: const Color(0xFFFEE500),
             ),
           ),
 

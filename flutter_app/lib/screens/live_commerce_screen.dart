@@ -1,7 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
+import '../core/constants/app_constants.dart';
 import '../services/commerce_service.dart';
 
 class LiveCommerceScreen extends StatefulWidget {
@@ -12,27 +12,13 @@ class LiveCommerceScreen extends StatefulWidget {
 }
 
 class _LiveCommerceScreenState extends State<LiveCommerceScreen> {
-  Timer? _viewerTimer;
-  int _viewerCount = 142;
-
   @override
   void initState() {
     super.initState();
-    _viewerTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      setState(() {
-        _viewerCount += (DateTime.now().second % 5 == 0 ? -1 : 1);
-      });
-    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final cs = context.read<CommerceService>();
       cs.startLiveCommerce('live_01', []);
     });
-  }
-
-  @override
-  void dispose() {
-    _viewerTimer?.cancel();
-    super.dispose();
   }
 
   @override
@@ -77,24 +63,14 @@ class _LiveCommerceScreenState extends State<LiveCommerceScreen> {
                               children: [
                                 Icon(Icons.circle, size: 10, color: Colors.white),
                                 SizedBox(width: 6),
-                                Text("LIVE", style: TextStyle(color: Colors.white, fontSize: 12)),
+                                Text(AppConstants.liveLabel, style: TextStyle(color: Colors.white, fontSize: 12)),
                               ],
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Text('$_viewerCount watching',
-                                style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                          ),
-                          const SizedBox(width: 8),
                           IconButton(
                             icon: Badge(
-                              label: Text('${commerce.cartCount}', style: TextStyle(fontSize: 9, color: Colors.white)),
+                              label: Text('${commerce.cartCount}', style: const TextStyle(fontSize: 9, color: Colors.white)),
                               child: const Icon(Icons.shopping_cart, color: Colors.white, size: 20),
                             ),
                             onPressed: () => Navigator.pushNamed(context, '/commerce/cart'),
@@ -120,12 +96,12 @@ class _LiveCommerceScreenState extends State<LiveCommerceScreen> {
                         children: [
                           Icon(Icons.smart_toy, color: Colors.greenAccent, size: 18),
                           SizedBox(width: 6),
-                          Text("Hermes AI", style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(AppConstants.hermesAI, style: TextStyle(fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        commerce.currentRecommendation?.hermesAnalysis ?? 'Analyzing stream...',
+                        commerce.currentRecommendation?.hermesAnalysis ?? AppConstants.analyzingStream,
                         style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
                       ),
                     ],
@@ -146,9 +122,9 @@ class _LiveCommerceScreenState extends State<LiveCommerceScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text("Featured Products",
+                          const Text(AppConstants.featuredProducts,
                               style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('${products.length} items',
+                          Text('${products.length} ${AppConstants.items}',
                               style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
                         ],
                       ),
@@ -194,7 +170,7 @@ class _LiveCommerceScreenState extends State<LiveCommerceScreen> {
                           child: ElevatedButton.icon(
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Purchase initiated')),
+                                const SnackBar(content: Text(AppConstants.purchaseInitiated)),
                               );
                             },
                             style: ElevatedButton.styleFrom(
@@ -203,7 +179,7 @@ class _LiveCommerceScreenState extends State<LiveCommerceScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                             icon: const Icon(Icons.shopping_cart),
-                            label: const Text("Buy Now", style: TextStyle(fontWeight: FontWeight.bold)),
+                            label: const Text(AppConstants.buyNow, style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -215,7 +191,7 @@ class _LiveCommerceScreenState extends State<LiveCommerceScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                             icon: const Icon(Icons.chat_bubble),
-                            label: const Text("Chat with Hermes"),
+                            label: const Text(AppConstants.chatWithHermes),
                           ),
                         ),
                       ],
@@ -226,7 +202,7 @@ class _LiveCommerceScreenState extends State<LiveCommerceScreen> {
                       child: TextButton.icon(
                         onPressed: () => Navigator.pushNamed(context, '/commerce/catalog'),
                         icon: const Icon(Icons.store, color: Colors.white70),
-                        label: const Text('Full Catalog', style: TextStyle(color: Colors.white70)),
+                        label: const Text(AppConstants.fullCatalog, style: TextStyle(color: Colors.white70)),
                       ),
                     ),
                   ],

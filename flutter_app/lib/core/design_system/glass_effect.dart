@@ -52,15 +52,17 @@ class GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: margin,
-      padding: padding,
-      decoration: style.decoration(),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(style.borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: style.blur, sigmaY: style.blur),
-          child: child,
+    return ClipRect(
+      child: Container(
+        margin: margin,
+        padding: padding,
+        decoration: style.decoration(),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(style.borderRadius),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: style.blur, sigmaY: style.blur),
+            child: child,
+          ),
         ),
       ),
     );

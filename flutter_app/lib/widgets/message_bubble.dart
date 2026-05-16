@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/chat_message.dart';
+import '../core/design_system/app_colors.dart';
 
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
@@ -12,6 +13,7 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMe = message.isMe;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
@@ -53,7 +55,11 @@ class MessageBubble extends StatelessWidget {
                     bottom: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: message.isAI ? Colors.grey[100] : isMe ? const Color(0xFFFEE500) : Colors.white,
+                    color: message.isAI
+                        ? (isDark ? AppColors.surfaceLight : Colors.grey[100])
+                        : isMe
+                            ? const Color(0xFFFEE500)
+                            : (isDark ? AppColors.surfaceCard : Colors.white),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),

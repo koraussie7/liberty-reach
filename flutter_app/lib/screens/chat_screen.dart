@@ -360,7 +360,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black87), onPressed: () => Navigator.pop(context)),
+          leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
         title: Row(
           children: [
             CircleAvatar(
@@ -620,8 +620,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, -2))],
+        color: const Color(0xFF1A1A1A),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, -2))],
       ),
       padding: EdgeInsets.only(left: 4, right: 8, top: 8, bottom: MediaQuery.of(context).padding.bottom + 8),
       child: Row(
@@ -663,7 +663,7 @@ class _ChatScreenState extends State<ChatScreen> {
           const SizedBox(width: 4),
           Expanded(
             child: Container(
-              decoration: BoxDecoration(color: const Color(0xFFF0F0F0), borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(color: const Color(0xFF2A2A2A), borderRadius: BorderRadius.circular(20)),
               child: TextField(
                 controller: _textController,
                 focusNode: _focusNode,
