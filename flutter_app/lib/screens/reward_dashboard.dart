@@ -35,7 +35,7 @@ class _RewardDashboardState extends State<RewardDashboard>
   @override
   void initState() {
     super.initState();
-    _commerceTabCtrl = TabController(length: _sampleProducts.length, viewportFraction: 0.4, vsync: this);
+    _commerceTabCtrl = TabController(length: _sampleProducts.length, vsync: this);
     _startEarning();
   }
 
@@ -103,7 +103,7 @@ class _RewardDashboardState extends State<RewardDashboard>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.2),
+                color: AppColors.primary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -126,11 +126,11 @@ class _RewardDashboardState extends State<RewardDashboard>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark.withOpacity(0.8)],
+          colors: [AppColors.primary, AppColors.primaryDark.withValues(alpha: 0.8)],
           begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8))],
+        boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +144,7 @@ class _RewardDashboardState extends State<RewardDashboard>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -174,14 +174,14 @@ class _RewardDashboardState extends State<RewardDashboard>
                   onPressed: () => wallet.connect(),
                   icon: const Icon(Icons.link, size: 14, color: Colors.white),
                   label: Text('Connect Wallet', style: AppTextStyles.labelSmall(color: Colors.white)),
-                  style: TextButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.15)),
+                  style: TextButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.15)),
                 ),
             ],
           ),
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: (_totalPoints % 5000) / 5000,
-            backgroundColor: Colors.white.withOpacity(0.15),
+            backgroundColor: Colors.white.withValues(alpha: 0.15),
             valueColor: AlwaysStoppedAnimation(AppColors.accentLight),
           ),
           const SizedBox(height: 4),
@@ -200,9 +200,9 @@ class _RewardDashboardState extends State<RewardDashboard>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: commerce.isLive ? Colors.redAccent.withOpacity(0.15) : AppColors.success.withOpacity(0.15),
+              color: commerce.isLive ? Colors.redAccent.withValues(alpha: 0.15) : AppColors.success.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: (commerce.isLive ? Colors.redAccent : AppColors.success).withOpacity(0.3)),
+              border: Border.all(color: (commerce.isLive ? Colors.redAccent : AppColors.success).withValues(alpha: 0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -241,7 +241,7 @@ class _RewardDashboardState extends State<RewardDashboard>
             begin: Alignment.topLeft, end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: AppColors.commerceGradientStart.withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6))],
+          boxShadow: [BoxShadow(color: AppColors.commerceGradientStart.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 6))],
         ),
         child: Stack(
           children: [
@@ -255,7 +255,7 @@ class _RewardDashboardState extends State<RewardDashboard>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -271,7 +271,7 @@ class _RewardDashboardState extends State<RewardDashboard>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.commerceBadge.withOpacity(0.8),
+                          color: AppColors.commerceBadge.withValues(alpha: 0.8),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text('LIVE', style: AppTextStyles.labelSmall(color: Colors.white)),
@@ -324,9 +324,9 @@ class _RewardDashboardState extends State<RewardDashboard>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
       child: Text(label, style: AppTextStyles.labelSmall(color: Colors.white)),
     );
@@ -369,7 +369,7 @@ class _RewardDashboardState extends State<RewardDashboard>
       decoration: BoxDecoration(
         color: AppColors.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,7 +377,7 @@ class _RewardDashboardState extends State<RewardDashboard>
           Container(
             height: 60, width: double.infinity,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.15),
+              color: AppColors.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
@@ -395,7 +395,7 @@ class _RewardDashboardState extends State<RewardDashboard>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                   decoration: BoxDecoration(
-                    color: AppColors.commerceBadge.withOpacity(0.2),
+                    color: AppColors.commerceBadge.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(product.badge!, style: AppTextStyles.labelSmall(color: AppColors.commerceBadge)),
@@ -468,7 +468,7 @@ class _RewardDashboardState extends State<RewardDashboard>
         decoration: BoxDecoration(
           color: AppColors.surfaceCard,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.15)),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -476,7 +476,7 @@ class _RewardDashboardState extends State<RewardDashboard>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 20),
@@ -530,7 +530,7 @@ class _LiveCommerceSheetState extends State<_LiveCommerceSheet> {
           Container(
             margin: const EdgeInsets.symmetric(vertical: 12),
             width: 40, height: 4,
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2)),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -543,7 +543,7 @@ class _LiveCommerceSheetState extends State<_LiveCommerceSheet> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.commerceBadge.withOpacity(0.2),
+                    color: AppColors.commerceBadge.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text('HERMES AI', style: AppTextStyles.labelSmall(color: AppColors.commerceBadge)),
@@ -576,10 +576,10 @@ class _LiveCommerceSheetState extends State<_LiveCommerceSheet> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.commerceGradientStart.withOpacity(0.2), AppColors.commerceGradientEnd.withOpacity(0.1)],
+          colors: [AppColors.commerceGradientStart.withValues(alpha: 0.2), AppColors.commerceGradientEnd.withValues(alpha: 0.1)],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.commerceGradientStart.withOpacity(0.3)),
+        border: Border.all(color: AppColors.commerceGradientStart.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -609,7 +609,7 @@ class _LiveCommerceSheetState extends State<_LiveCommerceSheet> {
                 color: _streaming ? AppColors.commerceBadge : AppColors.primary,
                 shape: BoxShape.circle,
                 boxShadow: _streaming
-                    ? [BoxShadow(color: AppColors.commerceBadge.withOpacity(0.4), blurRadius: 12)]
+                    ? [BoxShadow(color: AppColors.commerceBadge.withValues(alpha: 0.4), blurRadius: 12)]
                     : null,
               ),
               child: Icon(
@@ -630,14 +630,14 @@ class _LiveCommerceSheetState extends State<_LiveCommerceSheet> {
       decoration: BoxDecoration(
         color: AppColors.surfaceCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Row(
         children: [
           Container(
             width: 48, height: 48,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(Icons.shopping_bag, color: AppColors.primaryLight, size: 24),
@@ -654,7 +654,7 @@ class _LiveCommerceSheetState extends State<_LiveCommerceSheet> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                         decoration: BoxDecoration(
-                          color: AppColors.commerceBadge.withOpacity(0.2),
+                          color: AppColors.commerceBadge.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(product.badge!, style: AppTextStyles.labelSmall(color: AppColors.commerceBadge)),

@@ -1138,7 +1138,11 @@ async def home_video(filename: str):
     file_path = _resolve_video(filename)
     if not os.path.isfile(file_path) or not filename.endswith(".mp4"):
         return Response(status_code=404, content="Video not found")
-    headers = {"Content-Disposition": f'inline; filename="{filename}"'}
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Range, Content-Range",
+    }
     return FileResponse(file_path, media_type="video/mp4", headers=headers)
 
 @app.get("/home/thumb/{filename:path}")

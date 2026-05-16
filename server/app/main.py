@@ -15,9 +15,14 @@ app.add_middleware(
 from app.routers.code_assist import router as code_assist_router
 app.include_router(code_assist_router)
 
-# WebSocket Bridge
 from app.routers.opencode_bridge import router as bridge_router
 app.include_router(bridge_router)
+
+from app.routers.ai_chat import router as ai_chat_router
+app.include_router(ai_chat_router)
+
+from app.routers.platform_routes import router as platform_router
+app.include_router(platform_router)
 
 @app.get("/")
 async def root():

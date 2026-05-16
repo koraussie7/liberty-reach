@@ -24,7 +24,7 @@ class SpeechLanguageSettings extends StatelessWidget {
           return ListTile(
             leading: CircleAvatar(
               backgroundColor: isSelected
-                  ? Colors.deepPurple.withOpacity(0.1)
+                  ? Colors.deepPurple.withValues(alpha: 0.1)
                   : Colors.grey[100],
               child: Text(
                 _flagFor(locale),

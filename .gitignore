@@ -1,24 +1,9 @@
-# Rust
-target/
-Cargo.lock
-
-# Flutter
-flutter_app/build/
-flutter_app/.dart_tool/
-flutter_app/.packages
-flutter_app/pubspec.lock
-
-# Data
-data/
-*.db
-
-# Models
-localai/models/*.gguf
-localai/models/openmythos/
-
-# Environment
+__pycache__/
+*.pyc
+*.pyo
+*.pyo
 .env
-
-# OS
+venv/
+.venv/
+*.log
 .DS_Store
-Thumbs.db

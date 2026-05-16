@@ -99,7 +99,7 @@ class _MainScreenState extends State<MainScreen> {
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
         backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFFEE500).withOpacity(0.3),
+        indicatorColor: const Color(0xFFFEE500).withValues(alpha: 0.3),
         shadowColor: Colors.black12,
         surfaceTintColor: Colors.transparent,
         destinations: const [

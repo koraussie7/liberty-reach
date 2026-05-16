@@ -11,12 +11,12 @@ class AppTheme {
 
   // --- Glass Effect ---
   static final BoxDecoration glassDecoration = BoxDecoration(
-    color: Colors.white.withOpacity(0.05),
+    color: Colors.white.withValues(alpha: 0.05),
     borderRadius: BorderRadius.circular(20),
-    border: Border.all(color: Colors.white.withOpacity(0.1)),
+    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withValues(alpha: 0.3),
         blurRadius: 20,
         spreadRadius: 2,
       ),
@@ -24,17 +24,17 @@ class AppTheme {
   );
 
   static final Decoration strongGlass = BoxDecoration(
-    color: Colors.white.withOpacity(0.08),
+    color: Colors.white.withValues(alpha: 0.08),
     borderRadius: BorderRadius.circular(24),
-    border: Border.all(color: Colors.white.withOpacity(0.15)),
+    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.4),
+        color: Colors.black.withValues(alpha: 0.4),
         blurRadius: 30,
         spreadRadius: 5,
       ),
       BoxShadow(
-        color: primary.withOpacity(0.15),
+        color: primary.withValues(alpha: 0.15),
         blurRadius: 40,
         spreadRadius: -10,
       ),

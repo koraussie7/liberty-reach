@@ -149,7 +149,7 @@ class _MarketScreenState extends State<MarketScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.3),
+                            color: AppTheme.primary.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -187,7 +187,7 @@ class _MarketScreenState extends State<MarketScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [AppTheme.primary.withOpacity(0.3), AppTheme.accent.withOpacity(0.1)],
+                          colors: [AppTheme.primary.withValues(alpha: 0.3), AppTheme.accent.withValues(alpha: 0.1)],
                         ),
                         borderRadius: BorderRadius.circular(16),
                       ),

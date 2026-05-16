@@ -7,7 +7,7 @@ class GlassStyle {
   final double opacity;
   final double blur;
   final double borderRadius;
-  final BorderSide? border;
+  final BoxBorder? border;
   final List<BoxShadow>? shadows;
 
   const GlassStyle({
@@ -20,9 +20,9 @@ class GlassStyle {
   });
 
   BoxDecoration decoration() => BoxDecoration(
-    color: (color ?? AppColors.surfaceLight).withOpacity(opacity),
+    color: (color ?? AppColors.surfaceLight).withValues(alpha: opacity),
     borderRadius: BorderRadius.circular(borderRadius),
-    border: border ?? Border.all(color: Colors.white.withOpacity(0.08)),
+    border: border ?? Border.all(color: Colors.white.withValues(alpha: 0.08)),
   );
 
   static const card = GlassStyle();

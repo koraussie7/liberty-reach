@@ -37,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen> {
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w800,
-                color: Colors.black87.withOpacity(0.9),
+                color: Colors.black87.withValues(alpha: 0.9),
                 letterSpacing: -1,
               ),
             ),
@@ -46,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen> {
               'AI-Powered P2P Messenger',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.black87.withOpacity(0.6),
+                color: Colors.black87.withValues(alpha: 0.6),
                 letterSpacing: 0.5,
               ),
             ),

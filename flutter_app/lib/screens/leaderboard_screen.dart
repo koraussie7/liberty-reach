@@ -144,15 +144,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           _statItem(Icons.account_balance_wallet, 'Treasury', '${s.onchainBalance}', Colors.amber),
-          Container(height: 24, width: 1, color: Colors.white.withOpacity(0.15)),
+          Container(height: 24, width: 1, color: Colors.white.withValues(alpha: 0.15)),
           _statItem(Icons.people, 'Users', '${s.totalUsers}', Colors.cyanAccent),
-          Container(height: 24, width: 1, color: Colors.white.withOpacity(0.15)),
+          Container(height: 24, width: 1, color: Colors.white.withValues(alpha: 0.15)),
           _statItem(Icons.pie_chart, 'Remaining', '${s.remaining}', Colors.greenAccent),
         ],
       ),
@@ -173,7 +173,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)),
             ],
           ),
-          Text(label, style: TextStyle(fontSize: 9, color: Colors.white.withOpacity(0.5))),
+          Text(label, style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.5))),
         ],
       ),
     );
@@ -185,11 +185,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [const Color(0xFFFEE500).withOpacity(0.15), Colors.white.withOpacity(0.05)],
+          colors: [const Color(0xFFFEE500).withValues(alpha: 0.15), Colors.white.withValues(alpha: 0.05)],
           begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFEE500).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFFFEE500).withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

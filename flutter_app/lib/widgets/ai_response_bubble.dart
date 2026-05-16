@@ -42,13 +42,24 @@ class AIResponseBubble extends StatelessWidget {
         child: Container(
           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
           padding: const EdgeInsets.all(16),
-          decoration: GlassStyle.defaultStyle(
-            borderRadius: 20,
-            borderWidth: 1.0,
-            borderColor: Colors.white.withOpacity(0.12),
-            glowColor: _agentColor,
-            glowRadius: 24,
-            gradientColors: [Colors.white.withOpacity(0.06), Colors.white.withOpacity(0.03)],
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1.0),
+            boxShadow: [
+              BoxShadow(
+                color: _agentColor.withValues(alpha: 0.2),
+                blurRadius: 24,
+                spreadRadius: 0,
+              ),
+            ],
+            gradient: LinearGradient(
+              colors: [
+                Colors.white.withValues(alpha: 0.06),
+                Colors.white.withValues(alpha: 0.03),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +69,7 @@ class AIResponseBubble extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: _agentColor.withOpacity(0.2),
+                      color: _agentColor.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.auto_awesome, color: _agentColor, size: 16),
@@ -77,12 +88,12 @@ class AIResponseBubble extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: _agentColor.withOpacity(0.15),
+                        color: _agentColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '${(confidence * 100).toInt()}%',
-                        style: TextStyle(fontSize: 11, color: _agentColor.withOpacity(0.9)),
+                        style: TextStyle(fontSize: 11, color: _agentColor.withValues(alpha: 0.9)),
                       ),
                     ),
                 ],
@@ -99,7 +110,7 @@ class AIResponseBubble extends StatelessWidget {
               else
                 SelectableText(
                   text,
-                  style: AppTextStyles.bodyMedium,
+                  style: AppTextStyles.bodyMedium(),
                 ),
               const SizedBox(height: 12),
               Row(
@@ -143,7 +154,7 @@ class _ControlButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(

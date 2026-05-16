@@ -30,8 +30,8 @@ class _MainBottomNavState extends State<MainBottomNav> {
       body: _screens[_currentIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.95),
-          border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1), width: 1)),
+          color: Colors.black.withValues(alpha: 0.95),
+          border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1)),
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,

@@ -36,8 +36,8 @@ class _LoopCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
             colors: [
-              Colors.primaries[index % Colors.primaries.length].withOpacity(0.4),
-              Colors.primaries[(index + 3) % Colors.primaries.length].withOpacity(0.6),
+              Colors.primaries[index % Colors.primaries.length].withValues(alpha: 0.4),
+              Colors.primaries[(index + 3) % Colors.primaries.length].withValues(alpha: 0.6),
             ],
           ),
         ),
@@ -48,7 +48,7 @@ class _LoopCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text('Loop ${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
             const SizedBox(height: 2),
-            Text('${120 + index * 15}회', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11)),
+            Text('${120 + index * 15}회', style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11)),
           ],
         ),
       ),

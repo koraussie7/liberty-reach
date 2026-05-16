@@ -19,7 +19,7 @@ class LoopsPlayerScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.play_circle_outline, color: Colors.white.withOpacity(0.3), size: 80),
+                  Icon(Icons.play_circle_outline, color: Colors.white.withValues(alpha: 0.3), size: 80),
                   const SizedBox(height: 16),
                   Text(
                     video?.title ?? 'Loop ${videoIndex + 1}',
@@ -28,7 +28,7 @@ class LoopsPlayerScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     video?.description ?? (video != null ? '' : 'Video player ready'),
-                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
                   ),
                 ],
               ),
@@ -72,7 +72,7 @@ class LoopsPlayerScreen extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text('+${video?.rewardPoints ?? (videoIndex + 1) * 15} DADA', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
                       const Spacer(),
-                      Text('${video?.viewCount ?? 120 + videoIndex * 15} views', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
+                      Text('${video?.viewCount ?? 120 + videoIndex * 15} views', style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -82,7 +82,7 @@ class LoopsPlayerScreen extends StatelessWidget {
                   ),
                   Text(
                     video?.creator ?? 'Liberty Reach',
-                    style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13),
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
                   ),
                 ],
               ),
@@ -109,13 +109,13 @@ class _ActionButton extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: Colors.white, size: 24),
           ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11)),
+          Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11)),
         ],
       ),
     );

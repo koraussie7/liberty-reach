@@ -116,8 +116,8 @@ class _LoopThumbnail extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.primaries[index % Colors.primaries.length].withOpacity(0.4),
-                      Colors.primaries[(index + 3) % Colors.primaries.length].withOpacity(0.6),
+                      Colors.primaries[index % Colors.primaries.length].withValues(alpha: 0.4),
+                      Colors.primaries[(index + 3) % Colors.primaries.length].withValues(alpha: 0.6),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,

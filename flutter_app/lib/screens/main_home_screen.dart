@@ -31,11 +31,11 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           collapsedHeight: 138,
           toolbarHeight: 0,
           flexibleSpace: FlexibleSpaceBar(
-            background: LoopsPreviewBar(scrollController: _scrollController),
+            background: LoopsPreviewBar(),
           ),
         ),
         SliverToBoxAdapter(
-          child: ChatListScreen(embedded: true),
+          child: ChatListScreen(),
         ),
       ],
     );

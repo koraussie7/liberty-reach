@@ -8,7 +8,7 @@ class RewardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkTheme.scaffoldBackgroundColor,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -137,7 +137,14 @@ class RewardScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Container(
               height: 240,
-              decoration: AppTheme.strongGlass.copyWith(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 30, spreadRadius: 5),
+                  BoxShadow(color: AppTheme.primary.withValues(alpha: 0.15), blurRadius: 40, spreadRadius: -10),
+                ],
                 image: const DecorationImage(
                   image: NetworkImage("https://picsum.photos/id/1015/800/450"),
                   fit: BoxFit.cover,
@@ -264,7 +271,7 @@ class RewardScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(30),
       ),
       child: Text(text, style: const TextStyle(color: Colors.white)),
@@ -275,7 +282,7 @@ class RewardScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.6),
+        color: Colors.black.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(text, style: const TextStyle(fontSize: 13)),

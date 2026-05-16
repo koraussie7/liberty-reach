@@ -15,10 +15,10 @@ class GlassRankCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isTop3 ? Colors.yellow.withOpacity(0.08) : Colors.white.withOpacity(0.05),
+        color: isTop3 ? Colors.yellow.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isTop3 ? trophyColors[entry.rank - 1].withOpacity(0.5) : Colors.white.withOpacity(0.1),
+          color: isTop3 ? trophyColors[entry.rank - 1].withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.1),
           width: isTop3 ? 1.5 : 1,
         ),
       ),
@@ -28,7 +28,7 @@ class GlassRankCard extends StatelessWidget {
           Container(
             width: 40, height: 40,
             decoration: BoxDecoration(
-              color: isTop3 ? trophyColors[entry.rank - 1] : Colors.white.withOpacity(0.1),
+              color: isTop3 ? trophyColors[entry.rank - 1] : Colors.white.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -38,7 +38,7 @@ class GlassRankCard extends StatelessWidget {
                       '${entry.rank}',
                       style: TextStyle(
                         fontSize: 16, fontWeight: FontWeight.bold,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                       ),
                     ),
             ),
@@ -48,7 +48,7 @@ class GlassRankCard extends StatelessWidget {
           // Avatar circle
           CircleAvatar(
             radius: 22,
-            backgroundColor: isTop3 ? trophyColors[entry.rank - 1].withOpacity(0.3) : Colors.grey.withOpacity(0.2),
+            backgroundColor: isTop3 ? trophyColors[entry.rank - 1].withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.2),
             child: Text(
               entry.displayName.isNotEmpty ? entry.displayName[0].toUpperCase() : '?',
               style: TextStyle(
@@ -85,7 +85,7 @@ class GlassRankCard extends StatelessWidget {
               ),
               Text(
                 'DADA',
-                style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.4)),
+                style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.4)),
               ),
             ],
           ),

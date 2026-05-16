@@ -28,7 +28,7 @@ class VoiceInputButton extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: (speech.isListening ? Colors.red : Colors.deepPurple)
-                  .withOpacity(0.3),
+                  .withValues(alpha: 0.3),
               blurRadius: 8,
               spreadRadius: speech.isListening ? 2 : 0,
             ),

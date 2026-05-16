@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/wallet_service.dart';
 
 class QRScanScreen extends StatefulWidget {
@@ -10,8 +9,16 @@ class QRScanScreen extends StatefulWidget {
 }
 
 class _QRScanScreenState extends State<QRScanScreen> {
-  MobileScannerController? controller;
+  final TextEditingController _addressCtrl = TextEditingController();
+  final TextEditingController _amountCtrl = TextEditingController();
   bool _processing = false;
+
+  @override
+  void dispose() {
+    _addressCtrl.dispose();
+    _amountCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,128 +26,79 @@ class _QRScanScreenState extends State<QRScanScreen> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: const Text('QR Scan', style: TextStyle(color: Colors.white)),
+        title: const Text('Send DADA', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            flex: 4,
-            child: Stack(
-              children: [
-                MobileScanner(
-                  controller: controller,
-                  onDetect: (capture) {
-                    if (_processing) return;
-                    final barcode = capture.barcodes.firstOrNull;
-                    if (barcode?.rawValue != null) {
-                      _processScan(barcode!.rawValue!);
-                    }
-                  },
-                ),
-                Center(
-                  child: Container(
-                    width: 260, height: 260,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.purpleAccent, width: 2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-              ],
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.qr_code_scanner, size: 80, color: Colors.purpleAccent),
+            const SizedBox(height: 24),
+            const Text('Enter address & amount', style: TextStyle(color: Colors.white70, fontSize: 18)),
+            const SizedBox(height: 32),
+            TextField(
+              controller: _addressCtrl,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Address',
+                labelStyle: const TextStyle(color: Colors.white54),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
+              ),
             ),
-          ),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Scan Minima QR to send DADA', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: () => controller?.start(),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Rescan'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
-                ),
-              ],
+            const SizedBox(height: 16),
+            TextField(
+              controller: _amountCtrl,
+              style: const TextStyle(color: Colors.white),
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Amount (DADA)',
+                labelStyle: const TextStyle(color: Colors.white54),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.purpleAccent)),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _processing ? null : _processPayment,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purpleAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _processing
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Send', style: TextStyle(fontSize: 18)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Future<void> _processScan(String code) async {
-    _processing = true;
-    controller?.stop();
-
-    if (code.startsWith('minima:')) {
-      await _processMinimaPayment(code);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Not a Minima QR'), backgroundColor: Colors.red));
-        Navigator.pop(context, code);
-      }
+  Future<void> _processPayment() async {
+    final addr = _addressCtrl.text.trim();
+    final amount = double.tryParse(_amountCtrl.text.trim()) ?? 0;
+    if (addr.isEmpty || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter address and amount'), backgroundColor: Colors.red));
+      return;
     }
-  }
+    setState(() => _processing = true);
 
-  Future<void> _processMinimaPayment(String qrData) async {
-    try {
-      final uri = Uri.parse('https://${qrData.replaceFirst('minima:', '')}');
-      final toAddress = uri.host;
-      final amount = double.tryParse(uri.queryParameters['amount'] ?? '') ?? 0;
-      final memo = uri.queryParameters['memo'] ?? 'DADA Transfer';
+    final wallet = WalletService();
+    final success = await wallet.sendDada(addr, amount.toInt());
 
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A2E),
-          title: const Text('Send DADA', style: TextStyle(color: Colors.white)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('To: ${toAddress.length > 20 ? '${toAddress.substring(0, 10)}...${toAddress.substring(toAddress.length - 6)}' : toAddress}',
-                   style: const TextStyle(color: Colors.white70, fontSize: 13)),
-              const SizedBox(height: 12),
-              Text('Amount: $amount DADA', style: const TextStyle(color: Colors.purpleAccent, fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text('Memo: $memo', style: const TextStyle(color: Colors.white54, fontSize: 13)),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
-              child: const Text('Send'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm == true && mounted) {
-        final wallet = WalletService();
-        final success = await wallet.sendDada(toAddress: toAddress, amount: amount, memo: memo);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(success ? 'Sent $amount DADA!' : 'Transfer failed'),
-            backgroundColor: success ? Colors.green : Colors.red,
-          ));
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
-      }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(success ? 'Sent $amount DADA!' : 'Transfer failed'),
+        backgroundColor: success ? Colors.green : Colors.red,
+      ));
+      if (success) Navigator.pop(context);
     }
-
-    if (mounted) Navigator.pop(context);
-  }
-
-  @override
-  void dispose() {
-    controller?.dispose();
-    super.dispose();
+    setState(() => _processing = false);
   }
 }
