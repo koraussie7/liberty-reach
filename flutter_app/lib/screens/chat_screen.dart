@@ -14,6 +14,7 @@ import '../services/voice_service.dart';
 import '../services/speech_service.dart';
 import '../services/group_chat_service.dart';
 import '../services/video_call_service.dart';
+import '../services/p2p_service.dart';
 import 'package:provider/provider.dart';
 import '../core/design_system/app_colors.dart';
 import '../widgets/message_bubble.dart';

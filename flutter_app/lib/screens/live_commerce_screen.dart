@@ -185,47 +185,50 @@ class _LiveCommerceScreenState extends State<LiveCommerceScreen> {
                 bottom: 20,
                 left: 20,
                 right: 20,
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Purchase initiated')),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Purchase initiated')),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            icon: const Icon(Icons.shopping_cart),
+                            label: const Text("Buy Now", style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
                         ),
-                        icon: const Icon(Icons.shopping_cart),
-                        label: const Text("Buy Now", style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.pushNamed(context, '/chat'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepPurpleAccent,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            icon: const Icon(Icons.chat_bubble),
+                            label: const Text("Chat with Hermes"),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton.icon(
+                        onPressed: () => Navigator.pushNamed(context, '/commerce/catalog'),
+                        icon: const Icon(Icons.store, color: Colors.white70),
+                        label: const Text('Full Catalog', style: TextStyle(color: Colors.white70)),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => Navigator.pushNamed(context, '/chat'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurpleAccent,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        icon: const Icon(Icons.chat_bubble),
-                        label: const Text("Chat with Hermes"),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton.icon(
-                    onPressed: () => Navigator.pushNamed(context, '/commerce/catalog'),
-                    icon: const Icon(Icons.store, color: Colors.white70),
-                    label: const Text('Full Catalog', style: TextStyle(color: Colors.white70)),
-                  ),
-                ),
                   ],
                 ),
               ),
