@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 import '../models/chat_message.dart';
 
 // Conditional import: use FRB bindings on native, fallback to simulated on web
@@ -27,9 +25,6 @@ class LibertyBridge extends ChangeNotifier {
     String localaiUrl = 'http://localhost:8080',
   }) async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final storagePath = '${dir.path}/$peerName.db';
-
       // FRB native: uncomment below and remove simulated fallback
       // await RustLib.init();
       // final result = await rust_api.init(

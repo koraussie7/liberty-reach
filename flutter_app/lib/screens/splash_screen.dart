@@ -25,19 +25,19 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFEE500),
+      backgroundColor: const Color(0xFF0088cc),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.flutter_dash, size: 80, color: Colors.black87),
+            const Icon(Icons.flutter_dash, size: 80, color: Colors.white),
             const SizedBox(height: 20),
             Text(
               'Liberty Reach',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w800,
-                color: Colors.black87.withValues(alpha: 0.9),
+                color: Colors.white.withValues(alpha: 0.95),
                 letterSpacing: -1,
               ),
             ),
@@ -46,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen> {
               'AI-Powered P2P Messenger',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.black87.withValues(alpha: 0.6),
+                color: Colors.white.withValues(alpha: 0.7),
                 letterSpacing: 0.5,
               ),
             ),
@@ -56,7 +56,7 @@ class _SplashScreenState extends State<SplashScreen> {
               height: 24,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.black54,
+                color: Colors.white70,
               ),
             ),
           ],

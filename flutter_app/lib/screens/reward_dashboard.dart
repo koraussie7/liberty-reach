@@ -514,7 +514,6 @@ class _LiveCommerceSheet extends StatefulWidget {
 
 class _LiveCommerceSheetState extends State<_LiveCommerceSheet> {
   bool _streaming = false;
-  int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {

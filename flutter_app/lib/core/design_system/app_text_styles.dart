@@ -4,16 +4,14 @@ import 'app_colors.dart';
 class AppTextStyles {
   AppTextStyles._();
 
-  static const String _font = 'Inter';
-
-  static TextStyle headlineLarge() => const TextStyle(
-    fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.textPrimary,
+  static TextStyle headlineLarge({Color? color}) => TextStyle(
+    fontSize: 28, fontWeight: FontWeight.w700, color: color ?? AppColors.textPrimary,
   );
   static TextStyle headlineMedium({Color? color}) => TextStyle(
     fontSize: 22, fontWeight: FontWeight.w600, color: color ?? AppColors.textPrimary,
   );
-  static TextStyle titleLarge() => const TextStyle(
-    fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+  static TextStyle titleLarge({Color? color}) => TextStyle(
+    fontSize: 18, fontWeight: FontWeight.w600, color: color ?? AppColors.textPrimary,
   );
   static TextStyle titleMedium({Color? color}) => TextStyle(
     fontSize: 16, fontWeight: FontWeight.w500, color: color ?? AppColors.textPrimary,

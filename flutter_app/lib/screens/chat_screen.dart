@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -41,9 +40,6 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = false;
   List<String> _pendingImages = [];
   StreamSubscription? _chatSub;
-
-  // 송신자별 마지막 시간 (타임스탬프 구분선용)
-  DateTime? _lastTimestamp;
 
   @override
   void initState() {
@@ -120,67 +116,6 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) {
         setState(() => _pendingImages.add(b64));
       }
-    }
-  }
-
-  Future<void> _sendImage(String path) async {
-    setState(() => _isLoading = true);
-    final prompt = _textController.text.trim().isEmpty
-        ? 'Describe this image'
-        : _textController.text.trim();
-    _textController.clear();
-
-    try {
-      final bytes = await File(path).readAsBytes();
-      final b64 = base64Encode(bytes);
-
-      _addMessage(ChatMessage(
-        id: _uuid.v4(),
-        sender: 'me',
-        content: prompt,
-        isMe: true,
-        imagePaths: [path],
-      ));
-      final lid = _uuid.v4();
-      _addMessage(ChatMessage(
-        id: lid,
-        sender: _modelName,
-        content: 'Analyzing...',
-        isMe: false,
-        isAI: true,
-        isLoading: true,
-      ));
-
-      final response = await _ai.generate(prompt, images: [b64]);
-
-      if (mounted) {
-        setState(() {
-          _messages.removeWhere((m) => m.id == lid);
-          _addMessage(ChatMessage(
-            id: _uuid.v4(),
-            sender: _modelName,
-            content: response,
-            isMe: false,
-            isAI: true,
-          ));
-        });
-      }
-    } catch (e) {
-      debugPrint('[Chat] Image error: $e');
-      if (mounted) {
-        setState(() {
-          _messages.removeWhere((m) => m.isLoading);
-          _addMessage(ChatMessage(
-            id: _uuid.v4(),
-            sender: _modelName,
-            content: 'Error: ${e.toString().length > 100 ? "Request failed" : e.toString()}',
-            isMe: false,
-            isAI: true,
-          ));
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -306,9 +241,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Gradient 배경
+      // Telegram-style background
       body: Container(
-        color: Colors.transparent,
+        color: const Color(0xFFEFF2F5),
         child: SafeArea(
           child: Column(
             children: [
@@ -329,27 +264,32 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // --- Custom AppBar ---
+  // --- Telegram-style AppBar ---
   Widget _buildAppBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE8E8E8), width: 0.5),
+        ),
+      ),
       child: Row(
         children: [
           // Back button
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black87),
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF0088cc)),
             onPressed: () => Navigator.pop(context),
           ),
           // Avatar
           CircleAvatar(
             radius: 20,
             backgroundColor: widget.isAI
-                ? const Color(0xFFFEE500)
-                : Colors.grey[300],
+                ? const Color(0xFFE8F4FD)
+                : Colors.grey[200],
             child: Icon(
               widget.isAI ? Icons.auto_awesome : Icons.person,
-              color: widget.isAI ? Colors.brown : Colors.black54,
+              color: widget.isAI ? const Color(0xFF0088cc) : Colors.grey[600],
               size: 22,
             ),
           ),
@@ -363,22 +303,22 @@ class _ChatScreenState extends State<ChatScreen> {
                   widget.peerName,
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF111111),
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Row(
                   children: [
                     Container(
-                      width: 7,
-                      height: 7,
+                      width: 6,
+                      height: 6,
                       decoration: BoxDecoration(
                         color: widget.isAI
                             ? (_isAiReady
-                                ? const Color(0xFF4CAF50)
+                                ? const Color(0xFF34C759)
                                 : Colors.grey[400])
-                            : const Color(0xFF4CAF50),
+                            : const Color(0xFF34C759),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -388,9 +328,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           ? (_isAiReady ? 'On • $_modelName' : 'Offline')
                           : 'Online',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: Colors.grey[500],
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
@@ -416,7 +356,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         m.isGemini ? Icons.auto_awesome : Icons.memory,
                         size: 16,
                         color: m.id == _ai.selectedModel
-                            ? const Color(0xFFFEE500)
+                            ? const Color(0xFF0088cc)
                             : Colors.grey,
                       ),
                       const SizedBox(width: 8),
@@ -433,7 +373,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       ),
                       if (m.id == _ai.selectedModel)
-                        const Icon(Icons.check, size: 14, color: Color(0xFFFEE500)),
+                        const Icon(Icons.check, size: 14, color: Color(0xFF0088cc)),
                     ],
                   ),
                 );
@@ -559,18 +499,14 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // --- Input bar ---
+  // --- Telegram-style Input bar ---
   Widget _buildInput() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, -3),
-          ),
-        ],
+        border: const Border(
+          top: BorderSide(color: Color(0xFFE8E8E8), width: 0.5),
+        ),
       ),
       padding: EdgeInsets.only(
         left: 6,
@@ -590,8 +526,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(18),
                 ),
-                child: const Icon(Icons.add_photo_alternate_outlined,
-                    size: 18, color: Colors.grey),
+                child: Icon(Icons.add_photo_alternate_outlined,
+                    size: 18, color: Colors.grey[600]),
               ),
               tooltip: 'Add image',
               onSelected: (v) {
@@ -654,33 +590,19 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           const SizedBox(width: 6),
-          // Send button
+          // Send button — Telegram blue
           GestureDetector(
             onTap: _isLoading ? null : _sendMessage,
             child: Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                gradient: _isLoading
-                    ? null
-                    : const LinearGradient(
-                        colors: [Color(0xFFFEE500), Color(0xFFFFD54F)],
-                      ),
-                color: _isLoading ? Colors.grey[300] : null,
+                color: _isLoading ? Colors.grey[300] : const Color(0xFF0088cc),
                 shape: BoxShape.circle,
-                boxShadow: _isLoading
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: const Color(0xFFFEE500).withValues(alpha: 0.3),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
               ),
               child: Icon(
                 _isLoading ? Icons.hourglass_top : Icons.send,
-                color: _isLoading ? Colors.grey : Colors.brown,
+                color: _isLoading ? Colors.grey : Colors.white,
                 size: 18,
               ),
             ),

@@ -3,12 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class OpenCodeService {
-  final String _baseUrl;
   final http.Client _client;
 
   OpenCodeService({String? baseUrl})
-      : _baseUrl = baseUrl ?? 'https://opencode.ai/zen',
-        _client = http.Client();
+      : _client = http.Client();
 
   Future<String> chatViaProxy({
     required String prompt,
@@ -47,11 +45,6 @@ class OpenCodeService {
       debugPrint('[OpenCode] Proxy error: $e');
       rethrow;
     }
-  }
-
-  String _getApiKey() {
-    // In production, load from secure storage or env
-    return const String.fromEnvironment('OPENCODE_API_KEY', defaultValue: '');
   }
 
   void dispose() {

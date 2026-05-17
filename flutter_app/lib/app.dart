@@ -15,25 +15,26 @@ class LibertyReachApp extends StatelessWidget {
   }
 
   ThemeData _buildTheme() {
-    const primary = Color(0xFFFEE500);
+    const primary = Color(0xFF0088cc);
     return ThemeData(
       brightness: Brightness.light,
       primaryColor: primary,
-      scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+      scaffoldBackgroundColor: const Color(0xFFEFF2F5),
       appBarTheme: const AppBarTheme(
-        backgroundColor: primary,
+        backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
-        elevation: 0,
+        elevation: 0.5,
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: Colors.black87,
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
       ),
       colorScheme: ColorScheme.fromSeed(
         seedColor: primary,
         brightness: Brightness.light,
+        primary: primary,
       ),
       useMaterial3: true,
     );

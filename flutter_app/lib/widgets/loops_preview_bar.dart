@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/loops_screen.dart';
 import '../services/loops_service.dart';
 
 class LoopsPreviewBar extends StatefulWidget {
@@ -64,7 +65,12 @@ class _LoopsPreviewBarState extends State<LoopsPreviewBar> {
                   ],
                 ),
                 TextButton(
-                  onPressed: widget.onViewAll ?? () {},
+                  onPressed: widget.onViewAll ?? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoopsScreen()),
+                    );
+                  },
                   style: TextButton.styleFrom(foregroundColor: Colors.grey[400]),
                   child: const Text("View All", style: TextStyle(fontSize: 13)),
                 ),
@@ -100,7 +106,12 @@ class _LoopThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     final index = int.tryParse(video.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/loops/player', arguments: video),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LoopsScreen()),
+        );
+      },
       child: Container(
         width: 60,
         decoration: BoxDecoration(

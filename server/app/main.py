@@ -1,3 +1,7 @@
+import os
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -37,6 +41,10 @@ app.include_router(admin_point_router)
 # Payment (Dual: Stripe + DADA Point)
 from app.routers.payment import router as payment_router
 app.include_router(payment_router)
+
+# Legacy routes (migrated from server.py)
+from app.routers.legacy_routes import router as legacy_router
+app.include_router(legacy_router)
 
 @app.get("/")
 async def root():

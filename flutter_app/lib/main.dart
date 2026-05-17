@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/chat_list_screen.dart';
-import 'screens/chat_screen.dart';
 import 'screens/contacts_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/leaderboard_screen.dart';
 import 'screens/loops_screen.dart';
-import 'screens/loops_player_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,51 +24,45 @@ class LibertyReachApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
       home: const MainScreen(),
-      onGenerateRoute: _onGenerateRoute,
     );
   }
 
   ThemeData _buildTheme() {
-    const primaryColor = Color(0xFFFEE500);
+    const primaryColor = Color(0xFFF02C56);
     return ThemeData(
-      brightness: Brightness.light,
+      brightness: Brightness.dark,
       primaryColor: primaryColor,
-      scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+      scaffoldBackgroundColor: const Color(0xFF020617),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: Color(0xFF0F172A),
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: Colors.black87,
+          color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.w700,
         ),
       ),
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
-        brightness: Brightness.light,
+        brightness: Brightness.dark,
+        primary: primaryColor,
+        surface: Color(0xFF0F172A),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: const Color(0xFF0F172A),
+        indicatorColor: const Color(0xFFF02C56).withValues(alpha: 0.2),
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF94A3B8)),
+        ),
       ),
       useMaterial3: true,
     );
   }
 
-  Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
-    switch (settings.name) {
-      case '/loops/player':
-        final args = settings.arguments;
-        int index = 0;
-        if (args is int) {
-          index = args;
-        } else if (args is Map<String, dynamic>) {
-          index = args['index'] as int? ?? 0;
-        }
-        return MaterialPageRoute(
-          builder: (_) => LoopsPlayerScreen(videoIndex: index),
-        );
-    }
-    return null;
-  }
 }
 
 class MainScreen extends StatefulWidget {
@@ -98,34 +90,35 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFFEE500).withValues(alpha: 0.3),
-        shadowColor: Colors.black12,
+        backgroundColor: const Color(0xFF0F172A),
+        indicatorColor: const Color(0xFFF02C56).withValues(alpha: 0.2),
+        shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.chat_outlined),
-            selectedIcon: Icon(Icons.chat),
+            icon: Icon(Icons.chat_outlined, color: Color(0xFF64748B)),
+            selectedIcon: Icon(Icons.chat, color: Color(0xFFF02C56)),
             label: 'Chat',
           ),
           NavigationDestination(
-            icon: Icon(Icons.local_fire_department_outlined),
-            selectedIcon: Icon(Icons.local_fire_department),
+            icon: Icon(Icons.local_fire_department_outlined, color: Color(0xFF64748B)),
+            selectedIcon: Icon(Icons.local_fire_department, color: Color(0xFFF02C56)),
             label: 'Loops',
           ),
           NavigationDestination(
-            icon: Icon(Icons.emoji_events_outlined),
-            selectedIcon: Icon(Icons.emoji_events),
+            icon: Icon(Icons.emoji_events_outlined, color: Color(0xFF64748B)),
+            selectedIcon: Icon(Icons.emoji_events, color: Color(0xFFF02C56)),
             label: 'Ranking',
           ),
           NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
+            icon: Icon(Icons.people_outline, color: Color(0xFF64748B)),
+            selectedIcon: Icon(Icons.people, color: Color(0xFFF02C56)),
             label: 'Contacts',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
+            icon: Icon(Icons.settings_outlined, color: Color(0xFF64748B)),
+            selectedIcon: Icon(Icons.settings, color: Color(0xFFF02C56)),
             label: 'Settings',
           ),
         ],

@@ -29,8 +29,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: const Color(0xFFFEE500),
-                  child: const Icon(Icons.person, size: 32, color: Colors.black54),
+                  backgroundColor: const Color(0xFFE8F4FD),
+                  child: const Icon(Icons.person, size: 32, color: Color(0xFF0088cc)),
                 ),
                 const SizedBox(width: 16),
                 Column(
@@ -82,7 +82,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: Switch(
               value: _e2eeEnabled,
               onChanged: (v) => setState(() => _e2eeEnabled = v),
-              activeColor: const Color(0xFFFEE500),
+              activeThumbColor: const Color(0xFF0088cc),
             ),
           ),
           _settingTile(
@@ -102,11 +102,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _settingTile(
             icon: Icons.auto_awesome,
             title: 'AI 어시스턴트',
-            subtitle: 'Gemini 2.5 Flash + LocalAI',
+            subtitle: 'Gemini 2.5 Flash + OpenCode',
             trailing: Switch(
               value: _aiEnabled,
               onChanged: (v) => setState(() => _aiEnabled = v),
-              activeColor: const Color(0xFFFEE500),
+              activeThumbColor: const Color(0xFF0088cc),
             ),
           ),
           _settingTile(

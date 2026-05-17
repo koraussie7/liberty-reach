@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../screens/reward_screen.dart';
-import '../screens/live_commerce_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/loops_screen.dart';
 import '../screens/contacts_screen.dart';

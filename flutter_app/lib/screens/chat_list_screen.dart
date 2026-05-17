@@ -52,7 +52,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.auto_awesome),
+            icon: const Icon(Icons.auto_awesome, color: Color(0xFF0088cc)),
             onPressed: () => _openChat(context, ChatRoom(
               name: 'AI 어시스턴트',
               lastMsg: '',
@@ -85,11 +85,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[300]),
+          Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[250]),
           const SizedBox(height: 16),
           Text(
             '연결된 대화가 없습니다',
-            style: TextStyle(fontSize: 16, color: Colors.grey[500]),
+            style: TextStyle(fontSize: 15, color: Colors.grey[500]),
           ),
         ],
       ),
@@ -142,17 +142,17 @@ class _ChatRoomTile extends StatelessWidget {
       leading: CircleAvatar(
         radius: 24,
         backgroundColor: room.isAI
-            ? const Color(0xFFFEE500)
-            : Colors.grey[300],
+            ? const Color(0xFFE8F4FD)
+            : Colors.grey[200],
         child: Icon(
           room.isAI ? Icons.auto_awesome : Icons.person,
-          color: Colors.black54,
+          color: room.isAI ? const Color(0xFF0088cc) : Colors.grey[600],
           size: 24,
         ),
       ),
       title: Text(
         room.name,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF111111)),
       ),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 2),
@@ -173,7 +173,7 @@ class _ChatRoomTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: const BoxDecoration(
-                color: Color(0xFFFEE500),
+                color: Color(0xFF0088cc),
                 shape: BoxShape.circle,
               ),
               child: Text(
@@ -181,7 +181,7 @@ class _ChatRoomTile extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Colors.white,
                 ),
               ),
             ),

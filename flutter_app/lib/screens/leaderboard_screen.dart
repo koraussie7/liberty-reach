@@ -79,7 +79,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                 tabAlignment: TabAlignment.fill,
                 labelColor: Colors.black87,
                 unselectedLabelColor: Colors.black54,
-                indicatorColor: const Color(0xFFFEE500),
+                indicatorColor: const Color(0xFF0088cc),
                 tabs: _labels.map((l) => Tab(text: l)).toList(),
               ),
             ],
@@ -185,21 +185,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [const Color(0xFFFEE500).withValues(alpha: 0.15), Colors.white.withValues(alpha: 0.05)],
+          colors: [const Color(0xFF0088cc).withValues(alpha: 0.15), Colors.white.withValues(alpha: 0.05)],
           begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFEE500).withValues(alpha: 0.3)),
+        border: Border.all(color: const Color(0xFF0088cc).withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Container(
             width: 44, height: 44,
             decoration: const BoxDecoration(
-              color: Color(0xFFFEE500),
+              color: Color(0xFFE8F4FD),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.person, color: Colors.black87, size: 24),
+            child: const Icon(Icons.person, color: Color(0xFF0088cc), size: 24),
           ),
           const SizedBox(width: 14),
           const Expanded(

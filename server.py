@@ -1,3 +1,9 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# ⚠️  DEPRECATED — This file is the legacy server. It is replaced by
+#    the modular FastAPI structure at server/app/main.py.
+#    Do NOT add new routes here. Port any missing routes to the routers/
+#    directory and register them in app.main.py.
+# ══════════════════════════════════════════════════════════════════════════════
 import base64
 import json
 import uuid

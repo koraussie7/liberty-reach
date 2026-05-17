@@ -23,7 +23,7 @@ class WalletScreen extends StatelessWidget {
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFF6B46C1), Color(0xFF9F7AEA)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  gradient: LinearGradient(colors: [Color(0xFF0088cc), Color(0xFF5EACDE)], begin: Alignment.topLeft, end: Alignment.bottomRight),
                 ),
                 child: const Center(
                   child: Column(

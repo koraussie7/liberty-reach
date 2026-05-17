@@ -117,7 +117,7 @@ class _P2PVideoPlayerState extends State<P2PVideoPlayer> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.monetization_on, color: Color(0xFFFEE500), size: 18),
+                const Icon(Icons.monetization_on, color: Color(0xFF0088cc), size: 18),
                 const SizedBox(width: 8),
                 Text('+${result.pointsEarned} DADA Point'),
               ],
