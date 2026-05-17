@@ -34,6 +34,10 @@ app.include_router(stripe_webhook_router)
 from app.routers.admin_point import router as admin_point_router
 app.include_router(admin_point_router)
 
+# Payment (Dual: Stripe + DADA Point)
+from app.routers.payment import router as payment_router
+app.include_router(payment_router)
+
 @app.get("/")
 async def root():
     return {"status": "✅ DADA-AI Hermes Server Running", "hermes": "ready"}
