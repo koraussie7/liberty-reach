@@ -2,11 +2,20 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+.env.local
 venv/
 .venv/
 *.log
 .DS_Store
 Thumbs.db
+
+# Database files (runtime data, not source)
+*.db
+
+# Backup / old files
+*_backup.py
+*.old
+*.bak
 
 # Scratch test files
 hermes_*.json
