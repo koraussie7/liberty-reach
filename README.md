@@ -4,7 +4,7 @@
 
 **AI-Powered P2P Messenger · Decentralized Live Commerce Platform**
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License: Unlicense](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Rust](https://img.shields.io/badge/Rust-000000?logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![Minima](https://img.shields.io/badge/Minima-Blockchain-00FFAA)](https://minima.com)
@@ -166,7 +166,9 @@ Pull requests are welcome! Feel free to contribute or collaborate with our agent
 
 ## 📄 License
 
-**Apache License 2.0** — see [LICENSE](LICENSE) for details.
+**DADA-AI core is public domain under the [Unlicense](LICENSE)** — free for any purpose, commercial or non-commercial, without any conditions.
+
+> 📌 **Note:** The `puter-apps/` directory contains software derived from Puter and is licensed separately under **AGPL-3.0**. See [puter-apps/LICENSE](puter-apps/LICENSE) for details.
 
 ---
 
@@ -283,7 +285,9 @@ Pull Request는 언제나 환영합니다! 함께 기여하거나 우리의 AI �
 
 ## 📄 라이선스
 
-**Apache License 2.0** — 자세한 내용은 [LICENSE](LICENSE) 파일을 참고하세요.
+**DADA-AI 코어는 [Unlicense](LICENSE)로 공개 도메인에 귀속됩니다** — 상업적/비상업적 목적 모두 조건 없이 자유롭게 사용 가능합니다.
+
+> 📌 **참고:** `puter-apps/` 디렉토리는 Puter에서 파생된 소프트웨어로 **AGPL-3.0**이 별도 적용됩니다. 자세한 내용은 [puter-apps/LICENSE](puter-apps/LICENSE)를 확인하세요.
 
 ---
 
