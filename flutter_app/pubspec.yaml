@@ -25,6 +25,7 @@ dependencies:
   flutter_bloc: ^8.1.5
   equatable: ^2.0.5
   url_launcher: ^6.2.6
+  web_socket_channel: ^3.0.0
 
 dev_dependencies:
   flutter_test:

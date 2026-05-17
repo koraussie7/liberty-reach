@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/p2p_service.dart';
+import '../services/liberty_bridge.dart';
+import '../core/constants/app_constants.dart';
+import '../core/design_system/app_colors.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,13 +15,18 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _aiEnabled = true;
   bool _e2eeEnabled = true;
-  String _localAiUrl = 'http://localhost:8080';
+  String _localAiUrl = AppConstants.defaultAIUrl;
 
   @override
   Widget build(BuildContext context) {
+    final p2p = context.watch<P2PService>();
+    final bridge = context.watch<LibertyBridge>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeMode = context.watch<ThemeMode>();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('설정'),
+        title: const Text('Settings'),
         automaticallyImplyLeading: false,
       ),
       body: ListView(
@@ -24,7 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Profile section
           Container(
             padding: const EdgeInsets.all(20),
-            color: Colors.white,
+            color: isDark ? AppColors.surfaceLight : Colors.white,
             child: Row(
               children: [
                 CircleAvatar(
@@ -37,13 +47,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      '내 노드',
+                      'My Node',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Peer ID: 12D3KooW...abcd',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                      'Peer ID: ${bridge.peerId ?? p2p.localPeerId ?? '12D3KooW...abcd'}',
+                      style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : Colors.grey[500]),
                     ),
                   ],
                 ),
@@ -53,31 +63,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 12),
 
+          // Appearance
+          _sectionHeader('Appearance'),
+          _settingTile(
+            icon: isDark ? Icons.dark_mode : Icons.light_mode,
+            title: 'Theme',
+            subtitle: isDark ? 'Dark Mode' : 'Light Mode',
+            trailing: Switch(
+              value: isDark,
+              onChanged: (v) {
+                if (v) {
+                  context.read<ValueNotifier<ThemeMode>>().value = ThemeMode.dark;
+                } else {
+                  context.read<ValueNotifier<ThemeMode>>().value = ThemeMode.light;
+                }
+              },
+              activeColor: const Color(0xFFFEE500),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
           // P2P settings
-          _sectionHeader('P2P 네트워크'),
+          _sectionHeader('P2P Network'),
           _settingTile(
             icon: Icons.wifi,
-            title: '연결된 피어',
-            subtitle: '2개 피어 연결됨',
+            title: 'Connected Peers',
+            subtitle: '${p2p.connectedPeers.length} peers connected',
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                color: (p2p.isConnected ? const Color(0xFF4CAF50) : Colors.grey).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.circle, size: 8, color: Color(0xFF4CAF50)),
-                  SizedBox(width: 4),
-                  Text('온라인', style: TextStyle(fontSize: 12, color: Color(0xFF4CAF50))),
+                  Icon(Icons.circle, size: 8,
+                      color: p2p.isConnected ? const Color(0xFF4CAF50) : Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    p2p.isConnected ? 'Online' : 'Offline',
+                    style: TextStyle(fontSize: 12,
+                        color: p2p.isConnected ? const Color(0xFF4CAF50) : Colors.grey),
+                  ),
                 ],
               ),
             ),
           ),
+          if (!p2p.isConnected)
+            _settingTile(
+              icon: Icons.link,
+              title: 'Connect to Server',
+              subtitle: p2p.isConnecting ? 'Connecting...' : 'Tap to connect',
+              onTap: p2p.isConnecting ? null : () => p2p.connect(AppConstants.apiBaseUrl),
+            ),
           _settingTile(
             icon: Icons.shield,
-            title: '종단간 암호화',
+            title: 'End-to-End Encryption',
             subtitle: 'Noise Protocol + X25519',
             trailing: Switch(
               value: _e2eeEnabled,
@@ -87,22 +130,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _settingTile(
             icon: Icons.storage,
-            title: '메시지 저장',
-            subtitle: '로컬 SQLite',
-            trailing: const Text(
-              '24MB 사용 중',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
+            title: 'Message Storage',
+            subtitle: 'Local persistence (SharedPreferences)',
           ),
 
           const SizedBox(height: 12),
 
           // AI settings
-          _sectionHeader('AI 설정'),
+          _sectionHeader('AI Settings'),
           _settingTile(
             icon: Icons.auto_awesome,
-            title: 'AI 어시스턴트',
-            subtitle: 'Gemini 2.5 Flash + OpenCode',
+            title: 'AI Assistant',
+            subtitle: 'Gemini 2.5 Flash + LocalAI',
             trailing: Switch(
               value: _aiEnabled,
               onChanged: (v) => setState(() => _aiEnabled = v),
@@ -111,7 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _settingTile(
             icon: Icons.link,
-            title: 'AI 서버 주소',
+            title: 'AI Server URL',
             subtitle: _localAiUrl,
             trailing: const Icon(Icons.edit, size: 18, color: Colors.grey),
             onTap: () => _editAiUrl(context),
@@ -120,16 +159,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
 
           // About
-          _sectionHeader('정보'),
+          _sectionHeader('About'),
           _settingTile(
             icon: Icons.info_outline,
-            title: '버전',
+            title: 'Version',
             subtitle: 'Liberty Reach v0.1.0',
           ),
           _settingTile(
             icon: Icons.menu_book,
-            title: '문서',
-            subtitle: 'Obsidian Vault에서 보기',
+            title: 'Docs',
+            subtitle: 'Obsidian Vault',
           ),
         ],
       ),
@@ -174,7 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('AI 서버 주소'),
+        title: const Text('AI Server URL'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
@@ -185,14 +224,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               setState(() => _localAiUrl = controller.text);
               Navigator.pop(ctx);
             },
-            child: const Text('저장'),
+            child: const Text('Save'),
           ),
         ],
       ),

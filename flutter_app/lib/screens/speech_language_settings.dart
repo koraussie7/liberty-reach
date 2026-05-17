@@ -5,6 +5,17 @@ import '../services/speech_service.dart';
 class SpeechLanguageSettings extends StatelessWidget {
   const SpeechLanguageSettings({super.key});
 
+  static const Map<String, String> _supportedLocales = {
+    'English (US)': 'en-US',
+    'Korean': 'ko-KR',
+    'Japanese': 'ja-JP',
+    'Chinese': 'zh-CN',
+    'Vietnamese': 'vi-VN',
+    'Thai': 'th-TH',
+    'Spanish': 'es-ES',
+    'French': 'fr-FR',
+  };
+
   @override
   Widget build(BuildContext context) {
     final speech = context.watch<SpeechService>();
@@ -14,12 +25,12 @@ class SpeechLanguageSettings extends StatelessWidget {
         title: const Text('Speech Recognition Language'),
       ),
       body: ListView.separated(
-        itemCount: speech.supportedLocales.length,
+        itemCount: _supportedLocales.length,
         separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
         itemBuilder: (context, index) {
-          final lang = speech.supportedLocales.keys.elementAt(index);
-          final locale = speech.supportedLocales.values.elementAt(index);
-          final isSelected = locale == speech.currentLocale;
+          final lang = _supportedLocales.keys.elementAt(index);
+          final locale = _supportedLocales.values.elementAt(index);
+          final isSelected = locale == speech.language;
 
           return ListTile(
             leading: CircleAvatar(
@@ -36,7 +47,7 @@ class SpeechLanguageSettings extends StatelessWidget {
             trailing: isSelected
                 ? const Icon(Icons.check_circle, color: Colors.deepPurple)
                 : null,
-            onTap: () => speech.setLocale(lang),
+            onTap: () => speech.setLanguage(locale),
           );
         },
       ),

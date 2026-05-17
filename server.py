@@ -7,6 +7,7 @@
 import base64
 import json
 import uuid
+from datetime import datetime
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
@@ -1313,6 +1314,225 @@ async def commerce_hermes_analyze(request: dict):
         return {"video_id": video_id, "analysis": analysis}
     except Exception as e:
         return {"video_id": video_id, "analysis": "", "error": str(e)}
+
+# ── Group Chat Management ─────────────────────────────────────────────────────
+
+GROUPS_FILE = os.getenv("GROUPS_FILE", "groups.json")
+groups_db: dict = {}
+
+def _load_groups():
+    global groups_db
+    try:
+        if os.path.isfile(GROUPS_FILE):
+            with open(GROUPS_FILE) as f:
+                groups_db = json.load(f)
+    except Exception as e:
+        log.warning(f"Groups load error: {e}")
+        groups_db = {}
+
+def _save_groups():
+    try:
+        with open(GROUPS_FILE, "w") as f:
+            json.dump(groups_db, f, indent=2)
+    except Exception as e:
+        log.error(f"Groups save error: {e}")
+
+_load_groups()
+
+@app.post("/groups/create")
+async def create_group(request: dict):
+    name = request.get("name", "New Group")
+    members = request.get("members", [])
+    creator = request.get("creator", "unknown")
+    group_id = uuid.uuid4().hex[:12]
+
+    # Ensure creator is in members
+    all_members = list(members)
+    if creator not in [m.get("peer_id") for m in all_members]:
+        all_members.insert(0, {"peer_id": creator, "display_name": creator, "is_admin": True})
+
+    group = {
+        "id": group_id,
+        "name": name,
+        "members": all_members,
+        "created_at": datetime.utcnow().isoformat(),
+        "invite_code": uuid.uuid4().hex[:8],
+    }
+    groups_db[group_id] = group
+    _save_groups()
+    return group
+
+@app.post("/groups/{group_id}/join")
+async def join_group(group_id: str, request: dict):
+    if group_id not in groups_db:
+        return {"error": "Group not found"}
+    peer_id = request.get("peer_id", "")
+    display_name = request.get("display_name", peer_id)
+    if not peer_id:
+        return {"error": "peer_id required"}
+    members = groups_db[group_id]["members"]
+    if peer_id not in [m["peer_id"] for m in members]:
+        members.append({"peer_id": peer_id, "display_name": display_name, "is_admin": False})
+    _save_groups()
+    return groups_db[group_id]
+
+@app.get("/groups/{group_id}")
+async def get_group(group_id: str):
+    group = groups_db.get(group_id)
+    if not group:
+        return {"error": "Group not found"}
+    return group
+
+@app.get("/groups/by-invite/{invite_code}")
+async def get_group_by_invite(invite_code: str):
+    for gid, group in groups_db.items():
+        if group.get("invite_code") == invite_code:
+            return group
+    return {"error": "Invalid invite code"}
+
+@app.delete("/groups/{group_id}")
+async def delete_group(group_id: str):
+    if group_id in groups_db:
+        del groups_db[group_id]
+        _save_groups()
+    return {"status": "deleted"}
+
+# ── P2P Inference ────────────────────────────────────────────────────────────
+
+INFERENCE_TASKS: dict = {}
+
+@app.post("/inference/submit")
+async def inference_submit(request: dict):
+    task_id = uuid.uuid4().hex
+    task_type = request.get("type", "text_completion")
+    prompt = request.get("prompt", "")
+    images = request.get("images", [])
+
+    INFERENCE_TASKS[task_id] = {
+        "id": task_id,
+        "type": task_type,
+        "prompt": prompt,
+        "images": images,
+        "status": "pending",
+        "result": None,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+
+    # Attempt local AI inference
+    try:
+        local_body = {
+            "model": "gemma3:4b",
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+        }
+        c = get_http_client()
+        resp = await c.post(f"{LOCALAI_URL}/v1/chat/completions", json=local_body, timeout=httpx.Timeout(60))
+        if resp.status_code == 200:
+            data = resp.json()
+            result = data["choices"][0]["message"]["content"]
+            INFERENCE_TASKS[task_id]["result"] = result
+            INFERENCE_TASKS[task_id]["status"] = "completed"
+        else:
+            INFERENCE_TASKS[task_id]["status"] = "failed"
+            INFERENCE_TASKS[task_id]["error"] = f"AI error: {resp.status_code}"
+    except Exception as e:
+        INFERENCE_TASKS[task_id]["status"] = "failed"
+        INFERENCE_TASKS[task_id]["error"] = str(e)
+
+    return INFERENCE_TASKS[task_id]
+
+@app.get("/inference/{task_id}")
+async def inference_result(task_id: str):
+    task = INFERENCE_TASKS.get(task_id)
+    if not task:
+        return {"error": "Task not found"}
+    return task
+
+# ── WebSocket update for room-based group chat ──────────────────────────────
+
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    await websocket.accept()
+    active_connections[client_id] = websocket
+    log.info(f"WebSocket connected: {client_id}")
+
+    join_msg = json.dumps({"type": "peer_joined", "peer_id": client_id})
+    for cid, ws in active_connections.items():
+        if cid != client_id:
+            try:
+                await ws.send_text(join_msg)
+            except Exception:
+                pass
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            log.debug(f"WS msg from {client_id}: {data[:100]}")
+
+            try:
+                msg = json.loads(data)
+                msg_type = msg.get("type", "message")
+
+                if msg_type == "ping":
+                    await websocket.send_text(json.dumps({"type": "pong"}))
+
+                elif msg_type in ("chat", "group_chat"):
+                    target = msg.get("target", "*")
+                    sender = msg.get("sender", client_id)
+                    content = msg.get("content", "")
+                    timestamp = msg.get("timestamp", "")
+                    room = msg.get("room")
+
+                    payload = {
+                        "type": msg_type, "sender": sender,
+                        "content": content, "timestamp": timestamp,
+                    }
+                    if room:
+                        payload["room"] = room
+
+                    if target == "*":
+                        broadcast = json.dumps(payload)
+                        for cid, ws in active_connections.items():
+                            if cid != client_id:
+                                try:
+                                    await ws.send_text(broadcast)
+                                except Exception:
+                                    pass
+                    elif target in active_connections:
+                        target_msg = json.dumps(payload)
+                        try:
+                            await active_connections[target].send_text(target_msg)
+                        except Exception:
+                            pass
+
+                    await websocket.send_text(json.dumps({
+                        "type": "ack", "sender": sender,
+                        "content": content, "timestamp": timestamp,
+                        **({"room": room} if room else {}),
+                    }))
+
+                elif msg_type == "join":
+                    for cid, ws in active_connections.items():
+                        if cid != client_id:
+                            try:
+                                await ws.send_text(json.dumps({
+                                    "type": "peer_joined", "peer_id": client_id
+                                }))
+                            except Exception:
+                                pass
+
+            except json.JSONDecodeError:
+                await websocket.send_text(f"[DADA-AI] {data}")
+
+    except WebSocketDisconnect:
+        active_connections.pop(client_id, None)
+        log.info(f"WebSocket disconnected: {client_id}")
+        leave_msg = json.dumps({"type": "peer_left", "peer_id": client_id})
+        for cid, ws in active_connections.items():
+            try:
+                await ws.send_text(leave_msg)
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     port = int(os.getenv("SERVER_PORT", 8000))

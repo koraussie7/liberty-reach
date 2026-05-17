@@ -13,10 +13,13 @@ class VoiceInputButton extends StatelessWidget {
 
     return GestureDetector(
       onLongPressStart: (_) async {
-        await speech.startListening('한국어', onVoiceResult);
+        await speech.startListening(language: 'ko-KR');
       },
       onLongPressEnd: (_) async {
-        await speech.stopListening();
+        final result = await speech.stopListening();
+        if (result.isNotEmpty) {
+          onVoiceResult(result);
+        }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),

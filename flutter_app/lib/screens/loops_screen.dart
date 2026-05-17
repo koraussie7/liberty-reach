@@ -15,6 +15,7 @@ class _LoopsScreenState extends State<LoopsScreen> {
   final LoopsService _service = LoopsService();
   List<LoopVideo> _videos = [];
   bool _loading = true;
+  late PageController _pageController;
 
   static const _fallbackVideos = [
     _FallbackVideo(
@@ -37,6 +38,7 @@ class _LoopsScreenState extends State<LoopsScreen> {
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     _load();
   }
 
@@ -52,6 +54,7 @@ class _LoopsScreenState extends State<LoopsScreen> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     _service.dispose();
     super.dispose();
   }
