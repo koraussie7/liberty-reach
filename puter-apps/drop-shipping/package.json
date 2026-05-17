@@ -1,0 +1,27 @@
+{
+  "name": "dropshipping",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter storefront --filter admin dev",
+    "build": "pnpm --filter @dropshipping/database build & pnpm --parallel --filter storefront --filter admin build",
+    "lint": "pnpm --recursive lint",
+    "db:generate": "pnpm --filter @dropshipping/database db:generate",
+    "db:migrate": "pnpm --filter @dropshipping/database db:migrate",
+    "db:push": "pnpm --filter @dropshipping/database db:push",
+    "db:studio": "pnpm --filter @dropshipping/database db:studio"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "sharp",
+      "esbuild",
+      "unrs-resolver"
+    ]
+  }
+}

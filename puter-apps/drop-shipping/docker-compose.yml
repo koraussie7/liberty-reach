@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: dropshipping_db_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dropshipping
+      POSTGRES_PASSWORD: dropshipping_dev_pass
+      POSTGRES_DB: dropshipping_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - .docker/postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dropshipping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

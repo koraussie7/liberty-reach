@@ -1,0 +1,15 @@
+node_modules
+.next
+.env.local
+.env*.local
+packages/database/.env
+dist
+build
+*.tsbuildinfo
+
+# Docker
+.docker/postgres-data
+
+# OS
+.DS_Store
+Thumbs.db
