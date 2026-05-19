@@ -4,6 +4,7 @@ import '../core/theme/app_theme.dart';
 import '../services/home_service.dart';
 import '../services/dating_service.dart';
 import '../widgets/p2p_video_player.dart';
+import '../widgets/nearby_map_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -90,6 +91,10 @@ class _HomeScreenState extends State<HomeScreen> {
             // Hotel Card
             _HotelCard(),
             const SizedBox(height: 8),
+
+            // ── Nearby Places Map ──
+            const NearbyMapWidget(),
+            const SizedBox(height: 16),
 
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),

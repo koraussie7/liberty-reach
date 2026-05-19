@@ -122,7 +122,7 @@ async def create_payment(req: PaymentRequest):
         )
 
     elif req.payment_method == "stripe":
-        # ── Stripe 결제 ──────────────────────────────────────────
+        # ── Stripe 카드 결제 ──────────────────────────────────────
         if not stripe.api_key or stripe.api_key.startswith("sk_test_dummy"):
             raise HTTPException(503, "Stripe not configured — set STRIPE_SECRET_KEY")
 
@@ -171,6 +171,56 @@ async def create_payment(req: PaymentRequest):
             checkout_url=session.url,
         )
 
+    elif req.payment_method == "crypto":
+        # ── Stablecoin (USDC) 결제 ────────────────────────────────
+        if not stripe.api_key or stripe.api_key.startswith("sk_test_dummy"):
+            raise HTTPException(503, "Stripe not configured — set STRIPE_SECRET_KEY")
+
+        try:
+            session = stripe.checkout.Session.create(
+                payment_method_types=["crypto"],
+                line_items=[{
+                    "price_data": {
+                        "currency": req.currency,
+                        "product_data": {
+                            "name": req.description or "DADA-AI 상품",
+                        },
+                        "unit_amount": req.amount,
+                    },
+                    "quantity": 1,
+                }],
+                mode="payment",
+                success_url=os.getenv("BASE_URL", "https://privseai.com") + "/payment/success",
+                cancel_url=os.getenv("BASE_URL", "https://privseai.com") + "/payment/cancel",
+                metadata={
+                    "user_id": req.user_id,
+                    "product_id": req.product_id,
+                    "payment_type": "product",
+                },
+            )
+        except stripe.error.StripeError as e:
+            log.error(f"Stripe crypto error: {e}")
+            raise HTTPException(502, f"Crypto payment error: {e.user_message or str(e)}")
+
+        # Record pending transaction
+        _record_txn(
+            user_id=req.user_id,
+            product_id=req.product_id,
+            amount=req.amount,
+            currency=req.currency,
+            method="crypto",
+            status="pending",
+            desc=req.description or "",
+            session_id=session.id,
+        )
+
+        return PaymentResponse(
+            status="success",
+            payment_method="crypto",
+            message="USDC 결제 페이지로 이동합니다. Phantom/MetaMask 등으로 결제하세요.",
+            checkout_url=session.url,
+        )
+
     else:
         raise HTTPException(400, f"Invalid payment method: {req.payment_method}")
 
@@ -192,6 +242,12 @@ async def get_payment_methods(user_id: str):
                 "id": "stripe",
                 "name": "신용카드 (Stripe)",
                 "description": "안전한 카드 결제",
+                "available": True,
+            },
+            {
+                "id": "crypto",
+                "name": "USDC (Stablecoin)",
+                "description": "Phantom/MetaMask 등으로 USDC 결제",
                 "available": True,
             },
         ],

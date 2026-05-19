@@ -1,0 +1,12 @@
+# DADA-AI Agent Wallet - SEEDPHRASE (BACKUP SAFELY, DELETE AFTER BACKUP)
+# Generated: 2026-05-19
+# Vault Name: dada-agent
+# Vault Type: FastVault (server-assisted 2-of-2)
+# Chains: Bitcoin, Ethereum, THORChain, Solana, BSC
+# Ethereum Address: 0xC8e8400A7eBBCd82671687C7afF450281cA2dD6e
+# Bitcoin Address: bc1qgvy0fsmfwzat66f86s2zl78qdas6kuzqr4dj52
+# Solana Address: Hd7cfLn9ECnXp7GV1heqwJ3R569MAq44XnMDcZSSVcun
+# THORChain Address: thor1sc8ze2wslcr4u2tur65xle08urshvyayrxvvgh
+# BSC Address: 0xC8e8400A7eBBCd82671687C7afF450281cA2dD6e
+
+SEEDPHRASE="hand unusual bird task eye table culture impulse clump stay truck mean"

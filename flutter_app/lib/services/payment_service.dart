@@ -160,14 +160,16 @@ class PaymentService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        if (method == 'stripe' && data['checkout_url'] != null) {
+        if ((method == 'stripe' || method == 'crypto') && data['checkout_url'] != null) {
           final uri = Uri.parse(data['checkout_url']);
           if (await canLaunchUrl(uri)) {
             await launchUrl(uri, mode: LaunchMode.externalApplication);
           } else {
             return PaymentResult(
               success: false,
-              message: 'Stripe 결제 페이지를 열 수 없습니다.',
+              message: method == 'crypto'
+                  ? 'USDC 결제 페이지를 열 수 없습니다.'
+                  : 'Stripe 결제 페이지를 열 수 없습니다.',
               paymentMethod: method,
             );
           }

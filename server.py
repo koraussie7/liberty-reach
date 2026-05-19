@@ -10,11 +10,12 @@ import uuid
 from datetime import datetime
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, JSONResponse
 from dotenv import load_dotenv
 import uvicorn
 import os
 import sys
+import subprocess
 import sqlite3
 import httpx
 import logging
@@ -121,6 +122,10 @@ if not CEREBRAS_API_KEY:
     log.warning("CEREBRAS_API_KEY not set - Hermes agent will fail")
 CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "llama3.1-8b")
 CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions"
+
+# ── AGiXT Configuration ──────────────────────────────────────────────────────
+AGIXT_API_KEY = os.getenv("AGIXT_API_KEY", "dada_agixt_key")
+AGIXT_URI = os.getenv("AGIXT_URI", "http://localhost:7437")
 
 HERMES_AGENT_PROMPT = """You are Hermes, an autonomous AI agent with tool-use capabilities.
 
@@ -1071,6 +1076,21 @@ async def loops_upload(data: dict, request: Request):
 
         url = f"/uploads/{name}"
         log.info(f"Video uploaded: {name} ({len(raw)} bytes) reward={reward_points}")
+
+        # ── Copy to 110 video server for direct streaming ────────────
+        try:
+            subprocess.run(
+                ["scp", "-i", "/root/.ssh/id_225to110",
+                 "-o", "StrictHostKeyChecking=no",
+                 "-o", "ConnectTimeout=10",
+                 path,
+                 f"root@185.55.240.110:/root/loops/storage/app/public/tiktok/{name}"],
+                capture_output=True, text=True, timeout=30
+            )
+            log.info(f"Copied {name} to 110 video server")
+        except Exception as e:
+            log.warning(f"Failed to copy {name} to 110: {e}")
+
         return {
             "url": url, "name": name, "size": len(raw),
             "loops_url": loops_url, "reward_points": reward_points,
@@ -1083,6 +1103,7 @@ HOME_VIDEOS_DIR = os.getenv("HOME_VIDEOS_DIR", "/root/youtube_shorts")
 HOME_THUMBS_DIR = HOME_VIDEOS_DIR  # thumbnails live alongside videos
 HOME_H264_DIR = os.path.join(HOME_VIDEOS_DIR, "h264")  # H264 transcoded versions
 PUBLIC_HOST = os.getenv("PUBLIC_HOST", "https://privseai.com")
+VIDEO_HOST = os.getenv("VIDEO_HOST", "https://dada.privseai.com/videos")  # 110 video server
 
 def _resolve_video(fname: str) -> str:
     """Return path to best available video file (prefer H264)."""
@@ -1110,7 +1131,7 @@ def _build_loops_entry(fname: str, public_host: str = PUBLIC_HOST) -> dict | Non
         "id": video_id,
         "title": f"커플 챌린지 #{video_id[:8]}",
         "description": "🔥 한국 핫 쇼츠 🔥 #shorts #korea #trending",
-        "video_url": f"{public_host}/home/video/{fname}",
+        "video_url": f"{VIDEO_HOST}/tiktok/{fname}",
         "thumbnail_url": f"{public_host}/home/thumb/{thumb_name}" if thumb_path else None,
         "view_count": 0,
         "reward_points": 15,
@@ -1533,6 +1554,72 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 await ws.send_text(leave_msg)
             except Exception:
                 pass
+
+# ── AGiXT Proxy Endpoints ────────────────────────────────────────────────────
+
+AGIXT_HEADERS = lambda: {"Authorization": f"Bearer {AGIXT_API_KEY}"}
+
+@app.get("/agixt/health")
+async def agixt_health():
+    try:
+        async with httpx.AsyncClient(timeout=5) as c:
+            r = await c.get(f"{AGIXT_URI}/api/health", headers=AGIXT_HEADERS())
+            return JSONResponse({"status": "ok" if r.status_code == 200 else "error", "code": r.status_code})
+    except Exception as e:
+        return JSONResponse({"status": "unreachable", "error": str(e)})
+
+@app.get("/agixt/agents")
+async def agixt_list_agents():
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.get(f"{AGIXT_URI}/api/agents", headers=AGIXT_HEADERS())
+            return JSONResponse(r.json() if r.status_code == 200 else [], status_code=r.status_code)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+@app.post("/agixt/agent/create")
+async def agixt_create_agent(req: Request):
+    body = await req.json()
+    try:
+        async with httpx.AsyncClient(timeout=15) as c:
+            r = await c.post(f"{AGIXT_URI}/api/agent",
+                json=body, headers={**AGIXT_HEADERS(), "Content-Type": "application/json"})
+            return JSONResponse(r.json(), status_code=r.status_code)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+@app.post("/agixt/agent/{name}/prompt")
+async def agixt_prompt_agent(name: str, req: Request):
+    body = await req.json()
+    try:
+        async with httpx.AsyncClient(timeout=120) as c:
+            r = await c.post(f"{AGIXT_URI}/api/agent/{name}/prompt",
+                json=body, headers={**AGIXT_HEADERS(), "Content-Type": "application/json"})
+            return JSONResponse(r.json(), status_code=r.status_code)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+@app.post("/agixt/chain/{name}/run")
+async def agixt_run_chain(name: str, req: Request):
+    body = await req.json()
+    try:
+        async with httpx.AsyncClient(timeout=120) as c:
+            r = await c.post(f"{AGIXT_URI}/api/chain/{name}/run",
+                json=body, headers={**AGIXT_HEADERS(), "Content-Type": "application/json"})
+            return JSONResponse(r.json(), status_code=r.status_code)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+@app.post("/agixt/agent/{name}/learn/text")
+async def agixt_learn_text(name: str, req: Request):
+    body = await req.json()
+    try:
+        async with httpx.AsyncClient(timeout=30) as c:
+            r = await c.post(f"{AGIXT_URI}/api/agent/{name}/learn/text",
+                json=body, headers={**AGIXT_HEADERS(), "Content-Type": "application/json"})
+            return JSONResponse(r.json(), status_code=r.status_code)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
 
 if __name__ == "__main__":
     port = int(os.getenv("SERVER_PORT", 8000))

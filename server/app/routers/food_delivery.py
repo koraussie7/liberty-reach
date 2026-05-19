@@ -83,6 +83,23 @@ async def create_food_request(req: FoodOrderRequestIn):
         except Exception:
             pass
 
+    # ── Sync to supplier dashboard ──────────────────────────────────
+    try:
+        from app.routers.supplier_integration import sync_to_supplier
+        await sync_to_supplier(
+            service_type="food",
+            items={
+                "order_items": [item.model_dump() for item in req.items],
+                "delivery_address": req.delivery_address,
+                "max_budget": req.max_budget,
+                "notes": req.notes,
+            },
+            total_amount=float(req.max_budget or 0),
+            note=req.notes or f"배달 요청: {req.delivery_address[:50]}",
+        )
+    except Exception as e:
+        logger.warning(f"Supplier sync failed: {e}")
+
     return {"request_id": request_id, "status": "bidding"}
 
 

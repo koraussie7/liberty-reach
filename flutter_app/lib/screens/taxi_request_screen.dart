@@ -1,9 +1,14 @@
 // lib/screens/taxi_request_screen.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart';
 import '../core/design_system/app_colors.dart';
+import '../core/constants/app_constants.dart';
 import '../services/taxi_service.dart';
 import '../widgets/location_search_widget.dart';
+import '../widgets/map_view_widget.dart';
 import 'taxi_bid_screen.dart';
 
 class TaxiRequestScreen extends StatefulWidget {
@@ -16,9 +21,54 @@ class TaxiRequestScreen extends StatefulWidget {
 class _TaxiRequestScreenState extends State<TaxiRequestScreen> {
   SelectedLocation? _pickupLocation;
   SelectedLocation? _dropoffLocation;
+  bool _isDetectingPickup = true;
   int _passengers = 1;
   double _maxBudget = 25.0;
   bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _detectPickupLocation();
+  }
+
+  Future<void> _detectPickupLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) { if (mounted) setState(() => _isDetectingPickup = false); return; }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) { permission = await Geolocator.requestPermission(); }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _isDetectingPickup = false); return;
+      }
+      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high, timeLimit: const Duration(seconds: 15));
+      final client = http.Client();
+      try {
+        final resp = await client.post(
+          Uri.parse('${AppConstants.apiBaseUrl}/api/location/reverse-geocode'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'lat': pos.latitude, 'lng': pos.longitude}),
+        ).timeout(const Duration(seconds: 10));
+        if (resp.statusCode == 200 && mounted) {
+          final data = jsonDecode(resp.body);
+          setState(() {
+            _pickupLocation = SelectedLocation(
+              formattedAddress: data['formatted_address'] as String? ?? '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}',
+              lat: (data['lat'] as num).toDouble(), lng: (data['lng'] as num).toDouble(),
+              placeId: data['place_id'] as String? ?? '',
+            );
+            _isDetectingPickup = false;
+          });
+        } else { throw 'fail'; }
+      } catch (_) {
+        if (mounted) setState(() {
+          _pickupLocation = SelectedLocation(formattedAddress: '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}', lat: pos.latitude, lng: pos.longitude);
+          _isDetectingPickup = false;
+        });
+      }
+      client.close();
+    } catch (_) { if (mounted) setState(() => _isDetectingPickup = false); }
+  }
 
   // ── Submit ──
   Future<void> _startBidding() async {
@@ -88,11 +138,28 @@ class _TaxiRequestScreenState extends State<TaxiRequestScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Pickup Location ──
+            // ── Pickup Location (auto-detected) ──
             _sectionLabel('Pickup Location'),
             const SizedBox(height: 8),
+            SizedBox(
+              height: _pickupLocation != null && _dropoffLocation != null ? 220 : 180,
+              child: MapViewWidget(
+                  mode: _dropoffLocation != null && _pickupLocation != null
+                      ? MapViewMode.route
+                      : MapViewMode.marker,
+                  height: _pickupLocation != null && _dropoffLocation != null ? 220 : 180,
+                  markers: _pickupLocation != null && _dropoffLocation != null
+                      ? [MapPoint(lat: _pickupLocation!.lat, lng: _pickupLocation!.lng, label: 'Pickup'),
+                         MapPoint(lat: _dropoffLocation!.lat, lng: _dropoffLocation!.lng, label: 'Dropoff')]
+                      : _pickupLocation != null
+                          ? [MapPoint(lat: _pickupLocation!.lat, lng: _pickupLocation!.lng, label: 'Pickup')]
+                          : [],
+                  interactive: true,
+                ),
+            ),
+            const SizedBox(height: 8),
             LocationSearchWidget(
-              hintText: 'Where should we pick you up?',
+              hintText: 'Change pickup location...',
               onLocationSelected: (location) {
                 setState(() => _pickupLocation = location);
               },
@@ -120,7 +187,7 @@ class _TaxiRequestScreenState extends State<TaxiRequestScreen> {
             _sectionLabel('Max Budget'),
             const SizedBox(height: 8),
             _buildBudgetCard(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
 
             // ── Start Bidding Button ──
             _buildSubmitButton(),
@@ -128,6 +195,26 @@ class _TaxiRequestScreenState extends State<TaxiRequestScreen> {
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  // ── Widget: Detecting Location ──
+  Widget _buildDetectingLocation() {
+    return Container(
+      height: 180,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary)),
+          const SizedBox(height: 16),
+          const Text('Detecting your location...', style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+        ],
       ),
     );
   }

@@ -79,8 +79,25 @@ async def create_massage_request(req: MassageRequestIn):
         except Exception:
             pass
 
-    return {"request_id": request_id, "status": "bidding"}
+    # ── Sync to supplier dashboard ──────────────────────────────────
+    try:
+        from app.routers.supplier_integration import sync_to_supplier
+        await sync_to_supplier(
+            service_type="massage",
+            items={
+                "address": req.address,
+                "service_type": req.service_type,
+                "duration_minutes": req.duration_minutes,
+                "max_budget": req.max_budget,
+                "notes": req.notes,
+            },
+            total_amount=float(req.max_budget or 0),
+            note=req.notes or f"마사지 요청: {req.service_type}, {req.duration_minutes}분",
+        )
+    except Exception as e:
+        logger.warning(f"Supplier sync failed: {e}")
 
+    return {"request_id": request_id, "status": "bidding"}
 
 @router.post("/massage/bid/{request_id}")
 async def submit_massage_bid(request_id: str, bid: MassageBidIn):

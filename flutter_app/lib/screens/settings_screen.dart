@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../screens/business_dashboard_screen.dart';
 import '../services/p2p_service.dart';
 import '../services/liberty_bridge.dart';
 import '../core/constants/app_constants.dart';
@@ -22,7 +23,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final p2p = context.watch<P2PService>();
     final bridge = context.watch<LibertyBridge>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeMode = context.watch<ThemeMode>();
+    final themeNotifier = context.watch<ValueNotifier<ThemeMode>>();
+    final themeMode = themeNotifier.value;
 
     return Scaffold(
       appBar: AppBar(
@@ -136,6 +138,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 12),
 
+          // Wallet
+          _sectionHeader('Wallet & Account'),
+          _settingTile(
+            icon: Icons.account_balance_wallet,
+            title: 'Wallet Login',
+            subtitle: 'Login with your crypto wallet',
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+            onTap: () => Navigator.pushNamed(context, '/auth/wallet-login'),
+          ),
+
+          const SizedBox(height: 12),
+
           // AI settings
           _sectionHeader('AI Settings'),
           _settingTile(
@@ -169,6 +183,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             icon: Icons.menu_book,
             title: 'Docs',
             subtitle: 'Obsidian Vault',
+          ),
+
+          const SizedBox(height: 12),
+
+          // CS (Customer Service) for Business Owners
+          _sectionHeader('CS (Customer Service)'),
+          _settingTile(
+            icon: Icons.dashboard_customize,
+            title: '사업자 대시보드',
+            subtitle: '배달 · 호텔 · 식당 매출 및 주문 관리',
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+            ),
           ),
         ],
       ),

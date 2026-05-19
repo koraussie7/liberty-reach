@@ -16,7 +16,7 @@ from typing import Dict, Optional
 
 import httpx
 from fastapi import APIRouter, Request, Response, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 # Optional dependencies (not needed by ported routes but kept for env compatibility)
@@ -63,6 +63,7 @@ HOME_VIDEOS_DIR = os.getenv("HOME_VIDEOS_DIR", "/root/youtube_shorts")
 HOME_THUMBS_DIR = HOME_VIDEOS_DIR
 HOME_H264_DIR = os.path.join(HOME_VIDEOS_DIR, "h264")
 PUBLIC_HOST = os.getenv("PUBLIC_HOST", "https://privseai.com")
+VIDEO_HOST = os.getenv("VIDEO_HOST", "https://dada.privseai.com/videos")
 API_KEY = os.getenv("API_KEY", "")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -292,8 +293,8 @@ def _build_loops_entry(fname: str, public_host: str = PUBLIC_HOST) -> dict | Non
         "id": video_id,
         "title": f"커플 챌린지 #{video_id[:8]}",
         "description": "🔥 한국 핫 쇼츠 🔥 #shorts #korea #trending",
-        "video_url": f"{public_host}/home/video/{fname}",
-        "thumbnail_url": f"{public_host}/home/thumb/{thumb_name}" if thumb_path else None,
+        "video_url": f"{VIDEO_HOST}/tiktok/{fname}",
+        "thumbnail_url": f"{VIDEO_HOST}/tiktok/{thumb_name}" if thumb_path else None,
         "view_count": 0,
         "reward_points": 15,
         "creator": "DADA-AI",
@@ -371,7 +372,7 @@ async def _blockchain_reward(req: _RewardRequest, request: Request):
     if not verify_api_key(request):
         return {"error": "Invalid or missing API key"}
     points = max(1, req.seconds // {"watch": 15, "ai": 30, "relay": 60}.get(req.action, 60))
-    token = "DADAPOINT"
+    token = os.getenv("DADAPOINT_TOKEN", "DADAPOINT")
     cmd = f"send {req.user_address} {points} {token}"
     try:
         data = await minima_cmd(cmd)
@@ -554,6 +555,7 @@ async def preference_feedback(request: dict):
     if not all([prompt, response_a, response_b, preferred]):
         return {"error": "All fields required"}
     csv_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "preference_model", "user_preferences.csv")
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
     with open(csv_path, "a", newline="") as f:
         w = csv.writer(f)
         w.writerow([user_id, prompt, response_a, response_b, preferred, datetime.utcnow().isoformat()])
@@ -591,7 +593,12 @@ async def home_feed():
     videos = []
     try:
         files = sorted(os.listdir(HOME_VIDEOS_DIR), key=lambda f: os.path.getmtime(os.path.join(HOME_VIDEOS_DIR, f)), reverse=True)
+        # Only show files that exist on 110 video server
         for fname in files:
+            if not fname.endswith(".mp4"):
+                continue
+            if not (fname.startswith("kpop_") or fname.startswith("tiktok_")):
+                continue
             entry = _build_loops_entry(fname)
             if entry:
                 videos.append({
@@ -632,9 +639,110 @@ async def home_thumb(filename: str):
 # ── /couple ───────────────────────────────────────────────────────────────────
 @router.get("/couple")
 async def couple_page():
-    """Serve the couple challenge web page."""
-    html_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "static", "home.html")
-    return FileResponse(html_path, media_type="text/html")
+    """Serve the couple challenge web page (inline HTML)."""
+    html = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💕 Couple Challenge - DADA-AI</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 40px 30px;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .header { text-align: center; margin-bottom: 30px; }
+    .heart { font-size: 48px; }
+    h1 {
+      font-size: 28px; margin: 10px 0 5px;
+      background: linear-gradient(90deg, #f093fb, #f5576c);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle { color: rgba(255,255,255,0.6); font-size: 14px; }
+    .challenge-card {
+      background: rgba(255,255,255,0.06);
+      border-radius: 16px; padding: 20px; margin-bottom: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: transform 0.2s;
+    }
+    .challenge-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(245,87,108,0.4);
+    }
+    .challenge-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .challenge-desc { color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.5; }
+    .challenge-points {
+      display: inline-block; margin-top: 10px;
+      background: linear-gradient(90deg, #f093fb, #f5576c);
+      padding: 4px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+    }
+    .cta-button {
+      display: block; width: 100%; padding: 16px; border: none;
+      border-radius: 14px;
+      background: linear-gradient(90deg, #f093fb, #f5576c);
+      color: #fff; font-size: 18px; font-weight: 700;
+      cursor: pointer; transition: opacity 0.2s; margin-top: 10px;
+    }
+    .cta-button:hover { opacity: 0.9; }
+    .footer { text-align: center; margin-top: 24px; color: rgba(255,255,255,0.4); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="heart">💕</div>
+      <h1>Couple Challenge</h1>
+      <p class="subtitle">함께 도전하고 포인트를 모아보세요!</p>
+    </div>
+    <div class="challenge-card">
+      <div class="challenge-title">📸 데일리 인증샷</div>
+      <div class="challenge-desc">매일 함께하는 순간을 사진으로 남기고 인증하세요.<br>연속 7일 달성 시 보너스 포인트!</div>
+      <div class="challenge-points">+50 PT</div>
+    </div>
+    <div class="challenge-card">
+      <div class="challenge-title">🎯 커플 퀴즈</div>
+      <div class="challenge-desc">상대방에 대해 얼마나 알고 있나요?<br>매주 업데이트되는 퀴즈를 풀어보세요.</div>
+      <div class="challenge-points">+100 PT</div>
+    </div>
+    <div class="challenge-card">
+      <div class="challenge-title">🏆 30일 챌린지</div>
+      <div class="challenge-desc">30일 동안 매일 미션을 완료하고<br>특별한 보상을 받아가세요!</div>
+      <div class="challenge-points">+1000 PT</div>
+    </div>
+    <div class="challenge-card">
+      <div class="challenge-title">🎬 함께 영화보기</div>
+      <div class="challenge-desc">같은 영화를 보고 감상평을 공유하면<br>포인트가 적립됩니다.</div>
+      <div class="challenge-points">+30 PT</div>
+    </div>
+    <button class="cta-button" onclick="alert('🚧 커플 챌린지는 준비 중입니다!\\n곧 업데이트됩니다.')">
+      💕 지금 시작하기
+    </button>
+    <div class="footer">
+      DADA-AI Couple Challenge &middot; Build love together 💕
+    </div>
+  </div>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
 
 # ── /ws/{client_id} ───────────────────────────────────────────────────────────
 @router.websocket("/ws/{client_id}")

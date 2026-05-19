@@ -90,6 +90,26 @@ async def create_hotel_request(req: HotelRequestIn):
         except:
             pass
 
+    # ── Sync to supplier dashboard ──────────────────────────────────
+    try:
+        from app.routers.supplier_integration import sync_to_supplier
+        await sync_to_supplier(
+            service_type="hotel",
+            customer_name=req.customer_name if hasattr(req, 'customer_name') else "",
+            items={
+                "check_in": req.check_in,
+                "check_out": req.check_out,
+                "guests": req.guests,
+                "location": req.location,
+                "requirements": req.requirements,
+                "max_budget": req.max_budget,
+            },
+            total_amount=float(req.max_budget or 0),
+            note=f"호텔 요청: {req.location}, {req.guests}명",
+        )
+    except Exception as e:
+        logger.warning(f"Supplier sync failed: {e}")
+
     return {"request_id": request_id, "status": "bidding"}
 
 @router.post("/hotel/bid/{request_id}")

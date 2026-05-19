@@ -1,0 +1,9 @@
+# mythos-agent configuration
+provider: openai
+apiKey: sk-LYWTRexX6XOAXa8GZTdiXWgYfzcVO2GpguDl7WXUhgy4c6p4zcqs6YcPxiVTOXaV
+baseURL: https://opencode.ai/zen/go/v1
+model: deepseek-v4-flash
+scan:
+  patterns: true
+  ai: true
+  severity: critical

@@ -10,7 +10,8 @@ import '../services/chat_service.dart';
 import '../services/loops_service.dart';
 import '../services/hybrid_ai_service.dart';
 import '../services/voice_service.dart';
-import '../services/speech_service.dart';
+import '../services/stt_service.dart';
+import '../services/tts_service.dart';
 import '../services/group_chat_service.dart';
 import '../services/video_call_service.dart';
 import '../services/p2p_service.dart';
@@ -57,6 +58,7 @@ class _ChatScreenState extends State<ChatScreen> {
   StreamSubscription? _voiceSub;
 
   bool _isUploadingVideo = false;
+  bool _autoTts = true; // Auto-speak AI responses
 
   @override
   void initState() {
@@ -217,16 +219,20 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _startSpeechToText() async {
-    final speechService = context.read<SpeechService>();
-    await speechService.startListening();
+    final sttService = context.read<SttService>();
+    await sttService.startListening(language: 'ko-KR');
     setState(() {});
   }
 
   Future<void> _stopSpeechToText() async {
-    final speechService = context.read<SpeechService>();
-    final text = await speechService.stopListening();
+    final sttService = context.read<SttService>();
+    final text = await sttService.stopListening();
     if (text.isNotEmpty) {
       _textController.text = text;
+      // Auto-send to AI if in AI chat mode
+      if (widget.isAI) {
+        await _sendMessage();
+      }
     }
     setState(() {});
   }
@@ -313,6 +319,14 @@ class _ChatScreenState extends State<ChatScreen> {
             isAI: true,
           ));
         });
+
+        // Auto TTS for AI responses
+        if (_autoTts && resp.isNotEmpty && !resp.startsWith('Error')) {
+          try {
+            final tts = context.read<TtsService>();
+            tts.speak(resp);
+          } catch (_) {}
+        }
       }
     } catch (e) {
       debugPrint('[Chat] AI error: $e');
@@ -360,7 +374,7 @@ class _ChatScreenState extends State<ChatScreen> {
   // --- Build ---
   @override
   Widget build(BuildContext context) {
-    final speechService = context.watch<SpeechService>();
+    final sttService = context.watch<SttService>();
     final callService = context.watch<VideoCallService>();
 
     return Scaffold(
@@ -417,7 +431,21 @@ class _ChatScreenState extends State<ChatScreen> {
                 onPressed: () => Navigator.pushNamed(context, '/group/info', arguments: widget.roomId),
               ),
             if (widget.isAI)
-              PopupMenuButton<String>(
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // TTS toggle
+                  IconButton(
+                    icon: Icon(
+                      _autoTts ? Icons.volume_up : Icons.volume_off,
+                      size: 20,
+                      color: _autoTts ? const Color(0xFFF02C56) : Colors.grey,
+                    ),
+                    tooltip: _autoTts ? 'Voice response ON' : 'Voice response OFF',
+                    onPressed: () => setState(() => _autoTts = !_autoTts),
+                  ),
+                  // Model selector
+                  PopupMenuButton<String>(
                 icon: const Icon(Icons.model_training, size: 20, color: Colors.black54),
                 tooltip: 'Select model',
                 onSelected: (m) {
@@ -451,6 +479,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 }).toList(),
               ),
+            ],
+          ),
           ],
         ),
       ),
@@ -471,7 +501,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           // --- Speech listening bar ---
-          if (speechService.isListening)
+          if (sttService.isListening || sttService.state == SttState.error)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -480,10 +510,17 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                   const SizedBox(width: 8),
-                  Text(speechService.recognizedText.isNotEmpty
-                      ? speechService.recognizedText
-                      : 'Listening...'),
-                  const Spacer(),
+                  Expanded(
+                    child: Text(
+                      sttService.lastError.isNotEmpty
+                          ? '⚠️ ${sttService.lastError}'
+                          : sttService.interimText.isNotEmpty
+                              ? sttService.interimText
+                              : '🎤 말해보세요...',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: _stopSpeechToText,
                     child: const Icon(Icons.stop, color: Colors.red),
@@ -645,11 +682,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   onPressed: _isRecording ? _stopVoiceRecording : _startVoiceRecording,
                 ),
                 IconButton(
-                  icon: speechService.isListening
+                  icon: sttService.isListening
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.keyboard_voice, color: Colors.grey),
-                  tooltip: speechService.isListening ? 'Stop' : 'Speech to text',
-                  onPressed: speechService.isListening ? _stopSpeechToText : _startSpeechToText,
+                  tooltip: sttService.isListening ? 'Stop' : 'Speech to text',
+                  onPressed: sttService.isListening ? _stopSpeechToText : _startSpeechToText,
                 ),
                 const SizedBox(width: 4),
                 // Text field

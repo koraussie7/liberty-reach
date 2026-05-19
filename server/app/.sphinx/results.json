@@ -1,0 +1,466 @@
+{
+  "projectPath": "/root/DADA-AI/server/app",
+  "timestamp": "2026-05-19T02:50:05.447Z",
+  "duration": 761,
+  "languages": [
+    "python"
+  ],
+  "filesScanned": 27,
+  "phase1Findings": [
+    {
+      "id": "SPX-0002",
+      "rule": "weak-crypto",
+      "title": "Weak Cryptographic Algorithm",
+      "description": "Use of a weak or broken cryptographic algorithm detected. Use modern alternatives (e.g., SHA-256, AES-256).",
+      "severity": "medium",
+      "category": "crypto",
+      "cwe": "CWE-327",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/taxi_booking.py",
+        "line": 16,
+        "snippet": "TAXI_DB = os.getenv(\"TAXI_DB\", \"taxi_rides.json\")"
+      }
+    },
+    {
+      "id": "SPX-0001",
+      "rule": "sql-injection",
+      "title": "Potential SQL Injection",
+      "description": "User input appears to be concatenated directly into a SQL query. Use parameterized queries instead.",
+      "severity": "critical",
+      "category": "injection",
+      "cwe": "CWE-89",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/supplier_dashboard.py",
+        "line": 197,
+        "snippet": "f\"UPDATE supplier_orders SET status=?, {ts_field}=? WHERE id=?\","
+      }
+    },
+    {
+      "id": "SPX-0002",
+      "rule": "command-injection",
+      "title": "Potential Command Injection",
+      "description": "User input may be passed to a shell command. Use safe APIs that avoid shell interpretation.",
+      "severity": "critical",
+      "category": "injection",
+      "cwe": "CWE-78",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/hyperspace.py",
+        "line": 56,
+        "snippet": "result = subprocess.run([HYPERSPACE_CLI] + args, capture_output=True, text=True, timeout=30)"
+      }
+    },
+    {
+      "id": "SPX-0003",
+      "rule": "jwt-none-alg",
+      "title": "JWT None Algorithm Vulnerability",
+      "description": "JWT verification without algorithm restriction can allow forged tokens. Always specify allowed algorithms.",
+      "severity": "critical",
+      "category": "auth",
+      "cwe": "CWE-345",
+      "confidence": "medium",
+      "location": {
+        "file": "auth/auth_handler.py",
+        "line": 78,
+        "snippet": "payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])"
+      }
+    }
+  ],
+  "phase2Findings": [],
+  "confirmedVulnerabilities": [
+    {
+      "id": "SPX-0002",
+      "rule": "weak-crypto",
+      "title": "Weak Cryptographic Algorithm",
+      "description": "Use of a weak or broken cryptographic algorithm detected. Use modern alternatives (e.g., SHA-256, AES-256).",
+      "severity": "medium",
+      "category": "crypto",
+      "cwe": "CWE-327",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/taxi_booking.py",
+        "line": 16,
+        "snippet": "TAXI_DB = os.getenv(\"TAXI_DB\", \"taxi_rides.json\")"
+      }
+    },
+    {
+      "id": "SPX-0001",
+      "rule": "sql-injection",
+      "title": "Potential SQL Injection",
+      "description": "User input appears to be concatenated directly into a SQL query. Use parameterized queries instead.",
+      "severity": "critical",
+      "category": "injection",
+      "cwe": "CWE-89",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/supplier_dashboard.py",
+        "line": 197,
+        "snippet": "f\"UPDATE supplier_orders SET status=?, {ts_field}=? WHERE id=?\","
+      }
+    },
+    {
+      "id": "SPX-0002",
+      "rule": "command-injection",
+      "title": "Potential Command Injection",
+      "description": "User input may be passed to a shell command. Use safe APIs that avoid shell interpretation.",
+      "severity": "critical",
+      "category": "injection",
+      "cwe": "CWE-78",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/hyperspace.py",
+        "line": 56,
+        "snippet": "result = subprocess.run([HYPERSPACE_CLI] + args, capture_output=True, text=True, timeout=30)"
+      }
+    },
+    {
+      "id": "SPX-0003",
+      "rule": "jwt-none-alg",
+      "title": "JWT None Algorithm Vulnerability",
+      "description": "JWT verification without algorithm restriction can allow forged tokens. Always specify allowed algorithms.",
+      "severity": "critical",
+      "category": "auth",
+      "cwe": "CWE-345",
+      "confidence": "medium",
+      "location": {
+        "file": "auth/auth_handler.py",
+        "line": 78,
+        "snippet": "payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])"
+      }
+    },
+    {
+      "id": "LLM-0001",
+      "rule": "llm:llm-unsafe-eval",
+      "title": "LLM Output Execution: eval/exec on AI response",
+      "description": "LLM output is passed to eval() or exec(). An attacker who controls the prompt can achieve arbitrary code execution.",
+      "severity": "critical",
+      "category": "llm-security",
+      "cwe": "CWE-95",
+      "confidence": "high",
+      "location": {
+        "file": "routers/hyperspace.py",
+        "line": 56,
+        "snippet": "result = subprocess.run([HYPERSPACE_CLI] + args, capture_output=True, text=True, timeout=30)"
+      }
+    },
+    {
+      "id": "API-0001",
+      "rule": "api:api-no-pagination",
+      "title": "API: No Pagination on List Endpoint",
+      "description": "Database query returns all records without limit. Enables data dumping and denial of service.",
+      "severity": "medium",
+      "category": "api-security",
+      "cwe": "CWE-770",
+      "confidence": "high",
+      "location": {
+        "file": "routers/supplier_dashboard.py",
+        "line": 147,
+        "snippet": "query = \"SELECT * FROM supplier_orders WHERE 1=1\""
+      }
+    },
+    {
+      "id": "API-0002",
+      "rule": "api:api-cors-wildcard",
+      "title": "API: CORS Allows All Origins",
+      "description": "CORS configured with wildcard or 'true' origin. Any website can make authenticated requests to your API.",
+      "severity": "medium",
+      "category": "api-security",
+      "cwe": "CWE-942",
+      "confidence": "high",
+      "location": {
+        "file": "routers/platform_routes.py",
+        "line": 189,
+        "snippet": "\"Access-Control-Allow-Origin\": \"*\","
+      }
+    },
+    {
+      "id": "API-0003",
+      "rule": "api:api-cors-wildcard",
+      "title": "API: CORS Allows All Origins",
+      "description": "CORS configured with wildcard or 'true' origin. Any website can make authenticated requests to your API.",
+      "severity": "medium",
+      "category": "api-security",
+      "cwe": "CWE-942",
+      "confidence": "high",
+      "location": {
+        "file": "routers/legacy_routes.py",
+        "line": 623,
+        "snippet": "\"Access-Control-Allow-Origin\": \"*\","
+      }
+    },
+    {
+      "id": "HDR-0001",
+      "rule": "headers:header-no-csp",
+      "title": "Headers: Missing Content-Security-Policy",
+      "description": "No Content-Security-Policy header found. CSP prevents XSS, clickjacking, and data injection attacks.",
+      "severity": "high",
+      "category": "headers",
+      "cwe": "CWE-693",
+      "confidence": "medium",
+      "location": {
+        "file": "main.py",
+        "line": 0,
+        "snippet": "No Content-Security-Policy found in server files"
+      }
+    },
+    {
+      "id": "HDR-0002",
+      "rule": "headers:header-no-hsts",
+      "title": "Headers: Missing Strict-Transport-Security (HSTS)",
+      "description": "No HSTS header. Browsers may connect via HTTP, enabling man-in-the-middle attacks.",
+      "severity": "medium",
+      "category": "headers",
+      "cwe": "CWE-319",
+      "confidence": "medium",
+      "location": {
+        "file": "main.py",
+        "line": 0,
+        "snippet": "No Strict-Transport-Security found in server files"
+      }
+    },
+    {
+      "id": "HDR-0003",
+      "rule": "headers:header-no-xframe",
+      "title": "Headers: Missing X-Frame-Options",
+      "description": "No X-Frame-Options header. Pages can be embedded in iframes, enabling clickjacking attacks.",
+      "severity": "medium",
+      "category": "headers",
+      "cwe": "CWE-1021",
+      "confidence": "medium",
+      "location": {
+        "file": "main.py",
+        "line": 0,
+        "snippet": "No X-Frame-Options found in server files"
+      }
+    },
+    {
+      "id": "HDR-0004",
+      "rule": "headers:header-no-xcontent-type",
+      "title": "Headers: Missing X-Content-Type-Options",
+      "description": "No X-Content-Type-Options: nosniff header. Browsers may MIME-sniff responses, enabling XSS via file uploads.",
+      "severity": "medium",
+      "category": "headers",
+      "cwe": "CWE-693",
+      "confidence": "medium",
+      "location": {
+        "file": "main.py",
+        "line": 0,
+        "snippet": "No X-Content-Type-Options found in server files"
+      }
+    },
+    {
+      "id": "HDR-0005",
+      "rule": "headers:header-no-referrer-policy",
+      "title": "Headers: Missing Referrer-Policy",
+      "description": "No Referrer-Policy header. Sensitive URL parameters may leak to external sites via the Referer header.",
+      "severity": "low",
+      "category": "headers",
+      "cwe": "CWE-200",
+      "confidence": "medium",
+      "location": {
+        "file": "main.py",
+        "line": 0,
+        "snippet": "No Referrer-Policy found in server files"
+      }
+    },
+    {
+      "id": "HDR-0006",
+      "rule": "headers:header-no-permissions-policy",
+      "title": "Headers: Missing Permissions-Policy",
+      "description": "No Permissions-Policy header. Third-party scripts can access camera, microphone, and geolocation.",
+      "severity": "low",
+      "category": "headers",
+      "cwe": "CWE-693",
+      "confidence": "medium",
+      "location": {
+        "file": "main.py",
+        "line": 0,
+        "snippet": "No Permissions-Policy|Feature-Policy found in server files"
+      }
+    },
+    {
+      "id": "RACE-0001",
+      "rule": "race:race-toctou-fs",
+      "title": "Race Condition: TOCTOU in File Operations",
+      "description": "File existence checked before use. Between check and use, the file could be modified or removed by another process.",
+      "severity": "medium",
+      "category": "race-condition",
+      "cwe": "CWE-367",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/taxi_booking.py",
+        "line": 20,
+        "snippet": "if os.path.exists(TAXI_DB):"
+      }
+    },
+    {
+      "id": "RACE-0002",
+      "rule": "race:race-read-modify-write",
+      "title": "Race Condition: Non-Atomic Read-Modify-Write",
+      "description": "Value read from database/storage, modified, then written back without locking. Concurrent requests can overwrite each other's changes.",
+      "severity": "high",
+      "category": "race-condition",
+      "cwe": "CWE-362",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/taxi_booking.py",
+        "line": 23,
+        "snippet": "return json.load(f)"
+      }
+    },
+    {
+      "id": "RACE-0003",
+      "rule": "race:race-double-spend",
+      "title": "Race Condition: No Idempotency Check",
+      "description": "Payment or state-changing operation without idempotency key or duplicate check. Concurrent requests can process the same operation twice.",
+      "severity": "high",
+      "category": "race-condition",
+      "cwe": "CWE-362",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/point_charge.py",
+        "line": 47,
+        "snippet": "def _save_charge(charge: PointCharge):"
+      }
+    },
+    {
+      "id": "RACE-0004",
+      "rule": "race:race-double-spend",
+      "title": "Race Condition: No Idempotency Check",
+      "description": "Payment or state-changing operation without idempotency key or duplicate check. Concurrent requests can process the same operation twice.",
+      "severity": "high",
+      "category": "race-condition",
+      "cwe": "CWE-362",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/payment.py",
+        "line": 96,
+        "snippet": "async def create_payment(req: PaymentRequest):"
+      }
+    },
+    {
+      "id": "RACE-0005",
+      "rule": "race:race-toctou-fs",
+      "title": "Race Condition: TOCTOU in File Operations",
+      "description": "File existence checked before use. Between check and use, the file could be modified or removed by another process.",
+      "severity": "medium",
+      "category": "race-condition",
+      "cwe": "CWE-367",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/massage_booking.py",
+        "line": 20,
+        "snippet": "if os.path.exists(MASSAGE_DB):"
+      }
+    },
+    {
+      "id": "RACE-0006",
+      "rule": "race:race-read-modify-write",
+      "title": "Race Condition: Non-Atomic Read-Modify-Write",
+      "description": "Value read from database/storage, modified, then written back without locking. Concurrent requests can overwrite each other's changes.",
+      "severity": "high",
+      "category": "race-condition",
+      "cwe": "CWE-362",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/massage_booking.py",
+        "line": 23,
+        "snippet": "return json.load(f)"
+      }
+    },
+    {
+      "id": "RACE-0007",
+      "rule": "race:race-toctou-fs",
+      "title": "Race Condition: TOCTOU in File Operations",
+      "description": "File existence checked before use. Between check and use, the file could be modified or removed by another process.",
+      "severity": "medium",
+      "category": "race-condition",
+      "cwe": "CWE-367",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/hotel_booking.py",
+        "line": 20,
+        "snippet": "if os.path.exists(HOTEL_DB):"
+      }
+    },
+    {
+      "id": "RACE-0008",
+      "rule": "race:race-read-modify-write",
+      "title": "Race Condition: Non-Atomic Read-Modify-Write",
+      "description": "Value read from database/storage, modified, then written back without locking. Concurrent requests can overwrite each other's changes.",
+      "severity": "high",
+      "category": "race-condition",
+      "cwe": "CWE-362",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/hotel_booking.py",
+        "line": 23,
+        "snippet": "return json.load(f)"
+      }
+    },
+    {
+      "id": "RACE-0009",
+      "rule": "race:race-toctou-fs",
+      "title": "Race Condition: TOCTOU in File Operations",
+      "description": "File existence checked before use. Between check and use, the file could be modified or removed by another process.",
+      "severity": "medium",
+      "category": "race-condition",
+      "cwe": "CWE-367",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/food_delivery.py",
+        "line": 22,
+        "snippet": "if os.path.exists(FOOD_DB):"
+      }
+    },
+    {
+      "id": "RACE-0010",
+      "rule": "race:race-read-modify-write",
+      "title": "Race Condition: Non-Atomic Read-Modify-Write",
+      "description": "Value read from database/storage, modified, then written back without locking. Concurrent requests can overwrite each other's changes.",
+      "severity": "high",
+      "category": "race-condition",
+      "cwe": "CWE-362",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/food_delivery.py",
+        "line": 25,
+        "snippet": "return json.load(f)"
+      }
+    },
+    {
+      "id": "RACE-0011",
+      "rule": "race:race-double-spend",
+      "title": "Race Condition: No Idempotency Check",
+      "description": "Payment or state-changing operation without idempotency key or duplicate check. Concurrent requests can process the same operation twice.",
+      "severity": "high",
+      "category": "race-condition",
+      "cwe": "CWE-362",
+      "confidence": "medium",
+      "location": {
+        "file": "routers/admin_point.py",
+        "line": 23,
+        "snippet": "async def approve_charge(req: ChargeApproveRequest, admin_id: Optional[str] = Query(None)):"
+      }
+    },
+    {
+      "id": "RACE-0012",
+      "rule": "race:race-double-spend",
+      "title": "Race Condition: No Idempotency Check",
+      "description": "Payment or state-changing operation without idempotency key or duplicate check. Concurrent requests can process the same operation twice.",
+      "severity": "high",
+      "category": "race-condition",
+      "cwe": "CWE-362",
+      "confidence": "medium",
+      "location": {
+        "file": "models/point_charge.py",
+        "line": 27,
+        "snippet": "class PointCharge(BaseModel):"
+      }
+    }
+  ],
+  "dismissedCount": 0,
+  "chains": []
+}

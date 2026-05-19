@@ -10,8 +10,10 @@ log = logging.getLogger("dada.platform")
 
 router = APIRouter(tags=["Platform"])
 
-# ── DB ─────────────────────────────────────────────────────────
+# ── Config ─────────────────────────────────────────────────────
 LEADERBOARD_DB = os.getenv("LEADERBOARD_DB", "/root/DADA-AI/leaderboard.db")
+VIDEO_HOST = os.getenv("VIDEO_HOST", "https://dada.privseai.com/videos")
+LOOPS_110_STORAGE = os.getenv("LOOPS_110_STORAGE", "http://185.55.240.110:8080/storage")
 
 def init_db():
     os.makedirs(os.path.dirname(LEADERBOARD_DB) or ".", exist_ok=True)
@@ -83,37 +85,114 @@ class LoopsPost(BaseModel):
 # ── Loops Feed ──────────────────────────────────────────────────
 @router.get("/loops/feed")
 async def loops_feed(page: int = 1, limit: int = 20):
-    """Return loops feed from local videos or external API."""
-    # Try loops-server external API first
+    """Method 1: Server-side merge — combine remote + local videos deduped & sorted."""
+    combined = {"data": [], "page": page}
+
+    # 1) Try external API first
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get("https://privseai.com/api/web/feed", params={"page": page, "per_page": limit})
             if resp.status_code == 200:
                 data = resp.json()
-                return {"data": data.get("data", []), "page": page}
+                combined["data"] = data.get("data", [])
     except Exception:
         pass
-    # Fallback: scan local youtube_shorts directory
-    import glob
-    videos_dir = "/root/youtube_shorts"
-    files = sorted([f for f in os.listdir(videos_dir) if f.endswith(".mp4")], reverse=True)
+
+    # 2) Also scan local/110 videos (deduped by id)
+    local_items = []
+    from_110 = False
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["ssh", "-i", "/root/.ssh/id_225to110",
+             "-o", "StrictHostKeyChecking=no",
+             "-o", "ConnectTimeout=5",
+             "root@185.55.240.110",
+             "ls /root/loops/storage/app/public/tiktok/*.mp4 2>/dev/null | xargs -n1 basename"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            files = sorted([f.strip() for f in result.stdout.strip().split('\n') if f.strip().endswith('.mp4')], reverse=True)
+            from_110 = True
+        else:
+            videos_dir = "/root/youtube_shorts"
+            files = sorted([f for f in os.listdir(videos_dir) if f.endswith(".mp4") and (f.startswith("kpop_") or f.startswith("tiktok_"))], reverse=True)
+    except Exception:
+        videos_dir = "/root/youtube_shorts"
+        files = sorted([f for f in os.listdir(videos_dir) if f.endswith(".mp4") and (f.startswith("kpop_") or f.startswith("tiktok_"))], reverse=True)
+
+    storage_base = f"https://privseai.com/videos" if from_110 else VIDEO_HOST
+
     start = (page - 1) * limit
-    items = []
+    seen_ids = {v.get("id") for v in combined["data"]}
     for fname in files[start:start + limit]:
         vid = fname[:-4]
-        items.append({
-            "id": vid,
-            "caption": f"비디오 #{vid[:8]}",
-            "video_url": f"/home/video/{fname}",
-            "thumb": f"/home/thumb/{vid}.jpg",
-            "likes": 0, "comments": 0,
-        })
-    return {"data": items, "page": page, "total": len(files)}
+        if vid not in seen_ids:
+            local_items.append({
+                "id": vid,
+                "title": f"비디오 #{vid[:8]}",
+                "description": "🔥 한국 핫 쇼츠 🔥 #shorts #korea #trending",
+                "video_url": f"{storage_base}/tiktok/{fname}",
+                "thumbnail_url": f"{storage_base}/tiktok/{vid}.jpg",
+                "view_count": 0,
+                "reward_points": 15,
+                "likes": 0, "comments": 0,
+                "creator": "DADA-AI",
+                "source": "110" if from_110 else "local",
+            })
+            seen_ids.add(vid)
+
+    combined["data"].extend(local_items)
+
+    # 3) Sort by newest (descending id for tiktok videos)
+    combined["data"].sort(key=lambda v: v.get("id", ""), reverse=True)
+    combined["total"] = len(combined["data"])
+    return combined
+
+
+# ── Home Feed (proxy for Flutter app) ────────────────────────────
+@router.get("/home/feed")
+async def home_feed(page: int = 1, limit: int = 20):
+    """Home feed — mirrors /loops/feed for Flutter app compatibility."""
+    return await loops_feed(page=page, limit=limit)
+
 
 @router.post("/loops/upload")
 async def loops_upload(post: LoopsPost):
     """Stub for loops upload."""
     return {"success": True, "message": "Upload endpoint ready", "caption": post.caption}
+
+# ── Video Proxy ──────────────────────────────────────────────────
+import httpx as _httpx
+
+@router.get("/videos/tiktok/{filename:path}")
+async def proxy_tiktok_video(filename: str):
+    """Proxy TikTok videos from 110 server over HTTPS.
+    
+    Flutter app runs on HTTPS, but 110 server videos are HTTP only.
+    This endpoint streams the video through the DADA server so
+    browsers don't block mixed content.
+    """
+    from fastapi.responses import StreamingResponse
+    source_url = f"{LOOPS_110_STORAGE}/tiktok/{filename}"
+    try:
+        async with _httpx.AsyncClient(timeout=30) as client:
+            resp = await client.get(source_url)
+            if resp.status_code != 200:
+                from fastapi import HTTPException
+                raise HTTPException(resp.status_code, "Source not found")
+            return StreamingResponse(
+                resp.aiter_bytes(),
+                media_type=resp.headers.get("content-type", "video/mp4"),
+                headers={
+                    "Content-Disposition": f'inline; filename="{filename}"',
+                    "Access-Control-Allow-Origin": "*",
+                    "Cache-Control": "public, max-age=86400",
+                }
+            )
+    except _httpx.RequestError as e:
+        from fastapi import HTTPException
+        raise HTTPException(502, f"Proxy error: {e}")
 
 # ── Leaderboard ─────────────────────────────────────────────────
 @router.get("/leaderboard/stats")
@@ -189,3 +268,43 @@ async def commerce_trending():
             {"id": "3", "title": "LED Desk Lamp", "price": 15000, "reward_points": 100},
         ]
     }
+
+# ── Marqo Search ──────────────────────────────────────────────────
+
+
+@router.post("/commerce/search")
+async def commerce_search(request: dict):
+    """Semantic product search via Marqo."""
+    if not os.getenv("MARQO_URL"):
+        return {"error": "Marqo not configured"}
+    query = request.get("q", "")
+    limit = request.get("limit", 10)
+    if not query:
+        return {"error": "q is required"}
+    try:
+        from app.marqo_service import get_marqo
+        svc = get_marqo()
+        results = await svc.search_commerce(query, limit)
+        return {"query": query, "results": results}
+    except Exception as e:
+        import logging
+        logging.getLogger("dada.platform").error(f"Commerce search error: {e}")
+        return {"error": str(e)}
+
+
+@router.get("/messages/search")
+async def messages_search(q: str = "", limit: int = 10):
+    """Semantic message search via Marqo."""
+    if not os.getenv("MARQO_URL"):
+        return {"error": "Marqo not configured"}
+    if not q:
+        return {"error": "q is required"}
+    try:
+        from app.marqo_service import get_marqo
+        svc = get_marqo()
+        results = await svc.search_messages(q, limit)
+        return {"query": q, "results": results}
+    except Exception as e:
+        import logging
+        logging.getLogger("dada.platform").error(f"Message search error: {e}")
+        return {"error": str(e)}

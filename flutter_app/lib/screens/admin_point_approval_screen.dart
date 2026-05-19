@@ -243,7 +243,6 @@ class _AdminPointApprovalScreenState extends State<AdminPointApprovalScreen> {
           final entry = _history[index];
           final isApproved = entry['status'] == 'approved';
           final isRejected = entry['status'] == 'rejected';
-          final isPending = entry['status'] == 'pending';
 
           return Card(
             color: const Color(0xFF1A1A2E),

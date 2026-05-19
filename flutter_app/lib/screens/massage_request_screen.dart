@@ -1,9 +1,14 @@
 // lib/screens/massage_request_screen.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart';
 import '../core/design_system/app_colors.dart';
+import '../core/constants/app_constants.dart';
 import '../services/massage_service.dart';
 import '../widgets/location_search_widget.dart';
+import '../widgets/map_view_widget.dart';
 import 'massage_bid_screen.dart';
 
 class MassageRequestScreen extends StatefulWidget {
@@ -19,6 +24,7 @@ class _MassageRequestScreenState extends State<MassageRequestScreen> {
   int _duration = 60;
   double _maxBudget = 80.0;
   bool _isSubmitting = false;
+  bool _isDetecting = true;
 
   static const List<String> _serviceTypes = [
     'Deep Tissue', 'Swedish', 'Thai', 'Sports', 'Aromatherapy',
@@ -31,6 +37,88 @@ class _MassageRequestScreenState extends State<MassageRequestScreen> {
     'Sports': Icons.directions_run,
     'Aromatherapy': Icons.air,
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _detectCurrentLocation();
+  }
+
+  Future<void> _detectCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) setState(() => _isDetecting = false);
+        return;
+      }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _isDetecting = false);
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 15),
+      );
+
+      // Reverse geocode
+      try {
+        final client = http.Client();
+        final resp = await client
+            .post(
+              Uri.parse('${AppConstants.apiBaseUrl}/api/location/reverse-geocode'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'lat': pos.latitude, 'lng': pos.longitude}),
+            )
+            .timeout(const Duration(seconds: 10));
+
+        if (resp.statusCode == 200 && mounted) {
+          final data = jsonDecode(resp.body);
+          setState(() {
+            _location = SelectedLocation(
+              formattedAddress: data['formatted_address'] as String? ??
+                  '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}',
+              lat: (data['lat'] as num).toDouble(),
+              lng: (data['lng'] as num).toDouble(),
+              placeId: data['place_id'] as String? ?? '',
+            );
+            _isDetecting = false;
+          });
+        } else {
+          // Fallback to raw coordinates
+          if (mounted) {
+            setState(() {
+              _location = SelectedLocation(
+                formattedAddress: '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}',
+                lat: pos.latitude,
+                lng: pos.longitude,
+              );
+              _isDetecting = false;
+            });
+          }
+        }
+        client.close();
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _location = SelectedLocation(
+              formattedAddress: '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}',
+              lat: pos.latitude,
+              lng: pos.longitude,
+            );
+            _isDetecting = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isDetecting = false);
+    }
+  }
 
   Future<void> _startBidding() async {
     final service = context.read<MassageService>();
@@ -71,6 +159,29 @@ class _MassageRequestScreenState extends State<MassageRequestScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // ── Location Map (always visible, auto-detected) ──
+          _sectionLabel('Your Location'),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 200,
+            child: MapViewWidget(
+              mode: MapViewMode.marker,
+              height: 200,
+              markers: _location != null
+                  ? [MapPoint(lat: _location!.lat, lng: _location!.lng, label: _location!.formattedAddress)]
+                  : [],
+              interactive: true,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // ── Compact search field ──
+          LocationSearchWidget(
+              hintText: 'Search or change location...',
+              onLocationSelected: (loc) => setState(() => _location = loc),
+            ),
+          const SizedBox(height: 24),
+
           // Service Type
           _sectionLabel('Service Type'),
           const SizedBox(height: 10),
@@ -83,20 +194,11 @@ class _MassageRequestScreenState extends State<MassageRequestScreen> {
           _buildDurationCard(),
           const SizedBox(height: 24),
 
-          // Location
-          _sectionLabel('Your Location'),
-          const SizedBox(height: 8),
-          LocationSearchWidget(
-            hintText: 'Where should the therapist come?',
-            onLocationSelected: (loc) => setState(() => _location = loc),
-          ),
-          const SizedBox(height: 24),
-
           // Budget
           _sectionLabel('Max Budget'),
           const SizedBox(height: 8),
           _buildBudgetCard(),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           // Submit
           _buildSubmitButton(),
@@ -106,10 +208,35 @@ class _MassageRequestScreenState extends State<MassageRequestScreen> {
     );
   }
 
+  Widget _buildDetectingLocation() {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Detecting your location...',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildServiceTypeGrid() {
     return Wrap(
-      spacing: 10,
-      runSpacing: 10,
+      spacing: 10, runSpacing: 10,
       children: _serviceTypes.map((type) {
         final selected = type == _serviceType;
         return GestureDetector(
@@ -124,25 +251,17 @@ class _MassageRequestScreenState extends State<MassageRequestScreen> {
                 color: selected ? AppColors.primary.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.06),
               ),
             ),
-            child: Column(
-              children: [
-                Icon(
-                  _serviceIcons[type] ?? Icons.spa,
-                  color: selected ? AppColors.primary : AppColors.textMuted,
-                  size: 28,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  type,
+            child: Column(children: [
+              Icon(_serviceIcons[type] ?? Icons.spa,
+                  color: selected ? AppColors.primary : AppColors.textMuted, size: 28),
+              const SizedBox(height: 6),
+              Text(type,
                   style: TextStyle(
                     color: selected ? Colors.white : AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    fontSize: 12, fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+                  textAlign: TextAlign.center),
+            ]),
           ),
         );
       }).toList(),
@@ -157,46 +276,33 @@ class _MassageRequestScreenState extends State<MassageRequestScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Duration', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-              Row(
-                children: [
-                  _durationBtn(false, Icons.remove_circle_outline, _duration > 30 ? () => setState(() => _duration -= 15) : null),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${_duration} min',
-                    style: const TextStyle(color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(width: 12),
-                  _durationBtn(false, Icons.add_circle_outline, _duration < 180 ? () => setState(() => _duration += 15) : null),
-                ],
-              ),
-            ],
+      child: Column(children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          const Text('Duration', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+          Row(children: [
+            _durationBtn(Icons.remove_circle_outline, _duration > 30 ? () => setState(() => _duration -= 15) : null),
+            const SizedBox(width: 12),
+            Text('${_duration} min', style: const TextStyle(color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(width: 12),
+            _durationBtn(Icons.add_circle_outline, _duration < 180 ? () => setState(() => _duration += 15) : null),
+          ]),
+        ]),
+        const SizedBox(height: 12),
+        SliderTheme(
+          data: SliderThemeData(
+            activeTrackColor: AppColors.primary,
+            inactiveTrackColor: AppColors.primary.withValues(alpha: 0.15),
+            thumbColor: AppColors.primary,
+            overlayColor: AppColors.primary.withValues(alpha: 0.12),
+            trackHeight: 4,
           ),
-          const SizedBox(height: 12),
-          SliderTheme(
-            data: SliderThemeData(
-              activeTrackColor: AppColors.primary,
-              inactiveTrackColor: AppColors.primary.withValues(alpha: 0.15),
-              thumbColor: AppColors.primary,
-              overlayColor: AppColors.primary.withValues(alpha: 0.12),
-              trackHeight: 4,
-            ),
-            child: Slider(
-              value: _duration.toDouble(),
-              min: 30,
-              max: 180,
-              divisions: 10,
-              label: '$_duration min',
-              onChanged: (v) => setState(() => _duration = v.round()),
-            ),
+          child: Slider(
+            value: _duration.toDouble(), min: 30, max: 180, divisions: 10,
+            label: '$_duration min',
+            onChanged: (v) => setState(() => _duration = v.round()),
           ),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 
@@ -208,39 +314,31 @@ class _MassageRequestScreenState extends State<MassageRequestScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Max budget', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-              Text('\$${_maxBudget.toStringAsFixed(0)}', style: const TextStyle(color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.w700)),
-            ],
+      child: Column(children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          const Text('Max budget', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+          Text('\$${_maxBudget.toStringAsFixed(0)}', style: const TextStyle(color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.w700)),
+        ]),
+        const SizedBox(height: 8),
+        SliderTheme(
+          data: SliderThemeData(
+            activeTrackColor: AppColors.primary,
+            inactiveTrackColor: AppColors.primary.withValues(alpha: 0.15),
+            thumbColor: AppColors.primary,
+            overlayColor: AppColors.primary.withValues(alpha: 0.12),
+            trackHeight: 4,
           ),
-          const SizedBox(height: 8),
-          SliderTheme(
-            data: SliderThemeData(
-              activeTrackColor: AppColors.primary,
-              inactiveTrackColor: AppColors.primary.withValues(alpha: 0.15),
-              thumbColor: AppColors.primary,
-              overlayColor: AppColors.primary.withValues(alpha: 0.12),
-              trackHeight: 4,
-            ),
-            child: Slider(
-              value: _maxBudget,
-              min: 20,
-              max: 300,
-              divisions: 28,
-              label: '\$${_maxBudget.toStringAsFixed(0)}',
-              onChanged: (v) => setState(() => _maxBudget = v),
-            ),
+          child: Slider(
+            value: _maxBudget, min: 20, max: 300, divisions: 28,
+            label: '\$${_maxBudget.toStringAsFixed(0)}',
+            onChanged: (v) => setState(() => _maxBudget = v),
           ),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: const [
-            Text('\$20', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-            Text('\$300', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-          ]),
-        ],
-      ),
+        ),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: const [
+          Text('\$20', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+          Text('\$300', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+        ]),
+      ]),
     );
   }
 
@@ -261,7 +359,7 @@ class _MassageRequestScreenState extends State<MassageRequestScreen> {
     );
   }
 
-  Widget _durationBtn(bool filled, IconData icon, VoidCallback? onTap) {
+  Widget _durationBtn(IconData icon, VoidCallback? onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(

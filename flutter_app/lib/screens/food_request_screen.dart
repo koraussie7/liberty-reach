@@ -1,9 +1,14 @@
 // lib/screens/food_request_screen.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart';
 import '../core/design_system/app_colors.dart';
+import '../core/constants/app_constants.dart';
 import '../services/food_delivery_service.dart';
 import '../widgets/location_search_widget.dart';
+import '../widgets/map_view_widget.dart';
 import 'food_bid_screen.dart';
 
 class FoodRequestScreen extends StatefulWidget {
@@ -19,8 +24,8 @@ class _FoodRequestScreenState extends State<FoodRequestScreen> {
   String _selectedCategory = 'All';
 
   // ── Delivery Address ──
-  final TextEditingController _addressController = TextEditingController();
   SelectedLocation? _deliveryLocation;
+  bool _isDetecting = true;
 
   // ── Budget ──
   double _maxBudget = 25.0; // €5 - €100
@@ -28,9 +33,48 @@ class _FoodRequestScreenState extends State<FoodRequestScreen> {
   // ── Loading ──
   bool _isSubmitting = false;
 
+  Future<void> _detectCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) { if (mounted) setState(() => _isDetecting = false); return; }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) { permission = await Geolocator.requestPermission(); }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _isDetecting = false); return;
+      }
+      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high, timeLimit: const Duration(seconds: 15));
+      final client = http.Client();
+      try {
+        final resp = await client.post(
+          Uri.parse('${AppConstants.apiBaseUrl}/api/location/reverse-geocode'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'lat': pos.latitude, 'lng': pos.longitude}),
+        ).timeout(const Duration(seconds: 10));
+        if (resp.statusCode == 200 && mounted) {
+          final data = jsonDecode(resp.body);
+          setState(() {
+            _deliveryLocation = SelectedLocation(
+              formattedAddress: data['formatted_address'] as String? ?? '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}',
+              lat: (data['lat'] as num).toDouble(), lng: (data['lng'] as num).toDouble(),
+              placeId: data['place_id'] as String? ?? '',
+            );
+            _isDetecting = false;
+          });
+        } else { throw 'fail'; }
+      } catch (_) {
+        if (mounted) setState(() {
+          _deliveryLocation = SelectedLocation(formattedAddress: '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}', lat: pos.latitude, lng: pos.longitude);
+          _isDetecting = false;
+        });
+      }
+      client.close();
+    } catch (_) { if (mounted) setState(() => _isDetecting = false); }
+  }
+
   @override
   void initState() {
     super.initState();
+    _detectCurrentLocation();
     // Load menu from service
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final service = context.read<FoodDeliveryService>();
@@ -42,7 +86,6 @@ class _FoodRequestScreenState extends State<FoodRequestScreen> {
 
   @override
   void dispose() {
-    _addressController.dispose();
     super.dispose();
   }
 
@@ -167,15 +210,31 @@ class _FoodRequestScreenState extends State<FoodRequestScreen> {
             // ── Delivery Address ──
             _sectionLabel('Delivery Address'),
             const SizedBox(height: 8),
-            _buildAddressField(),
+            SizedBox(
+              height: 180,
+              child: MapViewWidget(
+                mode: MapViewMode.marker,
+                height: 180,
+                markers: _deliveryLocation != null
+                    ? [MapPoint(lat: _deliveryLocation!.lat, lng: _deliveryLocation!.lng, label: 'Delivery')]
+                    : [],
+                interactive: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            LocationSearchWidget(
+              hintText: 'Search or change delivery address...',
+              onLocationSelected: (location) {
+                setState(() => _deliveryLocation = location);
+              },
+            ),
             const SizedBox(height: 24),
 
             // ── Max Budget ──
             _sectionLabel('Max Budget'),
             const SizedBox(height: 8),
             _buildBudgetSlider(),
-
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
 
             // ── Start Bidding Button ──
             _buildSubmitButton(selectedItems.isNotEmpty),
@@ -411,13 +470,23 @@ class _FoodRequestScreenState extends State<FoodRequestScreen> {
     );
   }
 
-  // ── Widget: Delivery Address (Google Maps) ──
-  Widget _buildAddressField() {
-    return LocationSearchWidget(
-      hintText: 'Search for your delivery address...',
-      onLocationSelected: (location) {
-        setState(() => _deliveryLocation = location);
-      },
+  // ── Widget: Detecting Location ──
+  Widget _buildDetectingLocation() {
+    return Container(
+      height: 180,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary)),
+          const SizedBox(height: 16),
+          const Text('Detecting your location...', style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+        ],
+      ),
     );
   }
 

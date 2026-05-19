@@ -193,6 +193,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     enabled: true,
                   ),
 
+                  const SizedBox(height: 8),
+
+                  // Crypto card
+                  _buildMethodCard(
+                    id: "crypto",
+                    icon: Icons.currency_bitcoin,
+                    title: "USDC (Stablecoin)",
+                    subtitle: "Phantom/MetaMask 등으로 USDC 결제",
+                    trailing: const Icon(Icons.arrow_forward_ios,
+                        size: 16, color: Colors.white38),
+                    enabled: true,
+                  ),
+
                   const SizedBox(height: 32),
 
                   // Error
@@ -237,14 +250,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           : Icon(
                               _selectedMethod == "dada_point"
                                   ? Icons.token
-                                  : Icons.credit_card,
+                                  : _selectedMethod == "crypto"
+                                      ? Icons.currency_bitcoin
+                                      : Icons.credit_card,
                             ),
                       label: Text(
                         _isPaying
                             ? "처리 중..."
                             : _selectedMethod == "dada_point"
                                 ? "${widget.amount} DADA Point 결제"
-                                : "₩${(widget.amount / 100).toStringAsFixed(0)} 카드 결제",
+                                : _selectedMethod == "crypto"
+                                    ? "USDC 결제"
+                                    : "₩${(widget.amount / 100).toStringAsFixed(0)} 카드 결제",
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,

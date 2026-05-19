@@ -1,0 +1,204 @@
+{
+  "version": 1,
+  "entries": {
+    "marqo_service.py": {
+      "hash": "19d0e0b284e5d66b869f97fd964e7feaca98da77e618dfa6e2d8b8da6ee82b3f",
+      "timestamp": "2026-05-19T02:43:46.502Z",
+      "findings": []
+    },
+    "main.py": {
+      "hash": "ce5fb42e9945e282e8673fb0a1d2a2cc685b8901938bfc986917b8dc8f57fe3b",
+      "timestamp": "2026-05-19T02:43:46.503Z",
+      "findings": []
+    },
+    "models/point_charge.py": {
+      "hash": "6efa08f4e1b39a89c88e41b401c109dd0349aa5985caad28a2501c9c0ffea3ff",
+      "timestamp": "2026-05-19T02:43:46.503Z",
+      "findings": []
+    },
+    "models/__init__.py": {
+      "hash": "ff156ab234a8ea57a120e31c83baa591e613fa776d74cf29f2e75468bcff4e71",
+      "timestamp": "2026-05-19T02:43:46.503Z",
+      "findings": []
+    },
+    "auth/dependencies.py": {
+      "hash": "6a6aaead31e009e79e934549ca772c1e6173266c2de66d57b00f536bac496f1e",
+      "timestamp": "2026-05-19T02:43:46.504Z",
+      "findings": []
+    },
+    "auth/auth_routes.py": {
+      "hash": "826f841ab3d384931740a704de28394b2388204592e0a4484803f01dd84e4dae",
+      "timestamp": "2026-05-19T02:43:46.504Z",
+      "findings": []
+    },
+    "auth/auth_handler.py": {
+      "hash": "40cfd8b022cb29068ce2f6483eef1ab9ec5fd6e77b0620fa0859d97eb431ca48",
+      "timestamp": "2026-05-19T02:46:43.821Z",
+      "findings": [
+        {
+          "id": "SPX-0003",
+          "rule": "jwt-none-alg",
+          "title": "JWT None Algorithm Vulnerability",
+          "description": "JWT verification without algorithm restriction can allow forged tokens. Always specify allowed algorithms.",
+          "severity": "critical",
+          "category": "auth",
+          "cwe": "CWE-345",
+          "confidence": "medium",
+          "location": {
+            "file": "auth/auth_handler.py",
+            "line": 78,
+            "snippet": "payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])"
+          }
+        }
+      ]
+    },
+    "auth/__init__.py": {
+      "hash": "66fa26bdfb0c11253cfc195ad23d5e1051bbcae8d78d418da242ca0b279ef9e0",
+      "timestamp": "2026-05-19T02:43:46.505Z",
+      "findings": []
+    },
+    "routers/taxi_booking.py": {
+      "hash": "0e994443aad68003bb76f9e114a70628e95d4858143c1c65acd8102f0f7eb661",
+      "timestamp": "2026-05-19T02:43:46.506Z",
+      "findings": [
+        {
+          "id": "SPX-0002",
+          "rule": "weak-crypto",
+          "title": "Weak Cryptographic Algorithm",
+          "description": "Use of a weak or broken cryptographic algorithm detected. Use modern alternatives (e.g., SHA-256, AES-256).",
+          "severity": "medium",
+          "category": "crypto",
+          "cwe": "CWE-327",
+          "confidence": "medium",
+          "location": {
+            "file": "routers/taxi_booking.py",
+            "line": 16,
+            "snippet": "TAXI_DB = os.getenv(\"TAXI_DB\", \"taxi_rides.json\")"
+          }
+        }
+      ]
+    },
+    "routers/supplier_integration.py": {
+      "hash": "e1ac288adab47a796e642d356a99b52e22dd5b6ed133606c38146b4181181db3",
+      "timestamp": "2026-05-19T02:43:46.507Z",
+      "findings": []
+    },
+    "routers/supplier_dashboard.py": {
+      "hash": "68a3da7794e7f35388d7dea7e2a5966098ac34ad658e7772da12cc75dda655c1",
+      "timestamp": "2026-05-19T02:46:43.814Z",
+      "findings": [
+        {
+          "id": "SPX-0001",
+          "rule": "sql-injection",
+          "title": "Potential SQL Injection",
+          "description": "User input appears to be concatenated directly into a SQL query. Use parameterized queries instead.",
+          "severity": "critical",
+          "category": "injection",
+          "cwe": "CWE-89",
+          "confidence": "medium",
+          "location": {
+            "file": "routers/supplier_dashboard.py",
+            "line": 197,
+            "snippet": "f\"UPDATE supplier_orders SET status=?, {ts_field}=? WHERE id=?\","
+          }
+        }
+      ]
+    },
+    "routers/stripe_webhook.py": {
+      "hash": "31d55196d055084e5ff0de382d6b959bf7ea10af2350c82f563104612b73bd7d",
+      "timestamp": "2026-05-19T02:43:46.508Z",
+      "findings": []
+    },
+    "routers/point_charge.py": {
+      "hash": "ff386403727b9a7777df723917d153a31d8aa5cc4700c520729a07b603102ad3",
+      "timestamp": "2026-05-19T02:43:46.509Z",
+      "findings": []
+    },
+    "routers/platform_routes.py": {
+      "hash": "774534c44835410c87742b687659100db650baf07cf72832c6be5701ae8454fd",
+      "timestamp": "2026-05-19T02:43:46.511Z",
+      "findings": []
+    },
+    "routers/payment.py": {
+      "hash": "198124b48b6189e6f872058e02677b4f54fc8c94fe73f42dbdde2831cea3fe2a",
+      "timestamp": "2026-05-19T02:43:46.512Z",
+      "findings": []
+    },
+    "routers/opencode_bridge.py": {
+      "hash": "213182772b0aeb09c812efbc42aa5bec58c52eae93044954a4a6b8ef1f0e09a4",
+      "timestamp": "2026-05-19T02:43:46.512Z",
+      "findings": []
+    },
+    "routers/massage_booking.py": {
+      "hash": "6810505f0b46eeee6a238c9cc4619a709c54106edd7c2ce5a89c86978a79ae62",
+      "timestamp": "2026-05-19T02:43:46.513Z",
+      "findings": []
+    },
+    "routers/location.py": {
+      "hash": "5b4b025de698473f3198609323bfd70bd3614841a499e26aa370852517cab4ce",
+      "timestamp": "2026-05-19T02:43:46.514Z",
+      "findings": []
+    },
+    "routers/legacy_routes.py": {
+      "hash": "a24eb2ff0639d270de8159f432db189603db1a940b5f6c6c56d46d0a499a0a6b",
+      "timestamp": "2026-05-19T02:46:43.819Z",
+      "findings": []
+    },
+    "routers/isek.py": {
+      "hash": "75945a1a1b108766387345537176dd9d3349f7e254d2ba76bf5a09545944b845",
+      "timestamp": "2026-05-19T02:43:46.519Z",
+      "findings": []
+    },
+    "routers/hyperspace.py": {
+      "hash": "a18bbd77e8411eb6784f2204afe62ff51f902cce3bff2c719856815ebf4a88a1",
+      "timestamp": "2026-05-19T02:46:43.820Z",
+      "findings": [
+        {
+          "id": "SPX-0002",
+          "rule": "command-injection",
+          "title": "Potential Command Injection",
+          "description": "User input may be passed to a shell command. Use safe APIs that avoid shell interpretation.",
+          "severity": "critical",
+          "category": "injection",
+          "cwe": "CWE-78",
+          "confidence": "medium",
+          "location": {
+            "file": "routers/hyperspace.py",
+            "line": 56,
+            "snippet": "result = subprocess.run([HYPERSPACE_CLI] + args, capture_output=True, text=True, timeout=30)"
+          }
+        }
+      ]
+    },
+    "routers/hotel_booking.py": {
+      "hash": "d5a37af1761ec93e4b7785fb4a25c398522ed45ffb55385b0d84e7b9e4bdfdff",
+      "timestamp": "2026-05-19T02:43:46.520Z",
+      "findings": []
+    },
+    "routers/hermes_bridge_helper.py": {
+      "hash": "da0f7aacc41bcb11d0b6be3a6c4c29bdaf8fee6711c17477e246d0956bf38dca",
+      "timestamp": "2026-05-19T02:43:46.520Z",
+      "findings": []
+    },
+    "routers/food_delivery.py": {
+      "hash": "84ebd76c09fba5b41730bbb975f312b50c5c4478a627f65d5bcb0a027c53b201",
+      "timestamp": "2026-05-19T02:43:46.521Z",
+      "findings": []
+    },
+    "routers/code_assist.py": {
+      "hash": "5e9d433341a80ad7db96d0016d176799201870d9dc1f151e20fa2a924be672fc",
+      "timestamp": "2026-05-19T02:43:46.521Z",
+      "findings": []
+    },
+    "routers/ai_chat.py": {
+      "hash": "50093ccc49b5aaf1411f80d2207165963a00658ee4e52d52f0578ef6b80cfff6",
+      "timestamp": "2026-05-19T02:43:46.521Z",
+      "findings": []
+    },
+    "routers/admin_point.py": {
+      "hash": "9d220305c7ffd56b95197ceb4dee828179bf71ce853babba07ef816ec2f44cd8",
+      "timestamp": "2026-05-19T02:43:46.522Z",
+      "findings": []
+    }
+  }
+}

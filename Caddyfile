@@ -11,8 +11,15 @@ privseai.com {
 	root * /var/www/privseai/build/web
 	file_server
 
+	handle /vision* {
+		root * /var/www/privseai/vision
+		file_server {
+			index index.html
+		}
+	}
+
 	handle /api/* {
-		reverse_proxy localhost:8080
+		reverse_proxy localhost:8000
 	}
 
 	handle /upload* {
@@ -66,5 +73,25 @@ privseai.com {
 		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data: https:; connect-src 'self' ws: wss: https: http:; media-src 'self' https: blob:; worker-src 'self' blob:;"
 	}
 
+	encode gzip zstd
+}
+
+# Matrix Synapse (AI 메신저 백엔드)
+matrix.dada.privseai.com {
+	tls internal
+	reverse_proxy 185.55.240.110:8008
+	header {
+		Access-Control-Allow-Origin *
+	}
+	encode gzip zstd
+}
+
+# Whisper STT (음성→텍스트)
+stt.dada.privseai.com {
+	tls internal
+	reverse_proxy 185.55.240.110:8090
+	header {
+		Access-Control-Allow-Origin *
+	}
 	encode gzip zstd
 }
